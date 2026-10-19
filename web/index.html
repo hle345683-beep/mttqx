@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ĐT42 — Hệ thống điều khiển thiết bị và đánh giá độ trễ MQTT</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>ĐỀ TÀI ĐT42: HỆ THỐNG ĐIỀU KHIỂN THIẾT BỊ SỬ DỤNG MQTT</h1>
+      <p class="subtitle">Điều khiển vòng kín (dt42/cmd → dt42/state) &amp; Đánh giá độ trễ khứ hồi (RTT) theo mức QoS</p>
+    </div>
+    <div class="status-badges">
+      <span id="broker-badge" class="badge badge-offline">Broker: Ngắt kết nối</span>
+      <span id="esp32-badge" class="badge badge-offline">ESP32 (LWT): Offline</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="grid-two">
+      <!-- Khối 1: Điều khiển và Trạng thái thực tế -->
+      <div class="card">
+        <h2>1. Bảng điều khiển &amp; Phản hồi trạng thái thực tế</h2>
+        <div class="config-row">
+          <label for="broker-url">WebSocket Broker:</label>
+          <input id="broker-url" type="text" value="ws://127.0.0.1:8083/mqtt">
+          <label for="qos-select">Mức QoS:</label>
+          <select id="qos-select">
+            <option value="0">QoS 0 (At most once)</option>
+            <option value="1" selected>QoS 1 (At least once)</option>
+            <option value="2">QoS 2 (Exactly once)</option>
+          </select>
+        </div>
+
+        <div class="state-box">
+          <div class="state-item">
+            <span class="label">Trạng thái Relay thực tế (dt42/state):</span>
+            <strong id="relay-state" class="state-value state-off">OFF</strong>
+          </div>
+          <div class="state-item">
+            <span class="label">Độ trễ khứ hồi gần nhất (RTT):</span>
+            <strong id="last-rtt" class="state-value">— ms</strong>
+          </div>
+          <div class="state-item">
+            <span class="label">Mã phiên lệnh (cmd_id):</span>
+            <strong id="last-cmd-id" class="state-value">0</strong>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button id="btn-on" class="btn btn-primary" disabled>BẬT THIẾT BỊ (ON)</button>
+          <button id="btn-off" class="btn btn-secondary" disabled>TẮT THIẾT BỊ (OFF)</button>
+          <button id="btn-local" class="btn btn-outline" disabled>Mô phỏng Nút nhấn tại chỗ (GPIO27)</button>
+        </div>
+        <p class="note">Ghi chú: Giao diện chỉ cập nhật trạng thái hiển thị khi nhận được bản tin phản hồi từ topic <code>dt42/state</code>. Khi nhận bản tin từ nút nhấn tại chỗ (<code>t_send = 0</code>) hoặc bản tin Retain khi mới tải trang, hệ thống đồng bộ trạng thái nhưng không tính vào thống kê RTT.</p>
+      </div>
+
+      <!-- Khối 2: Bảng tổng hợp thống kê RTT theo mức QoS -->
+      <div class="card">
+        <div class="card-header-inline">
+          <h2>2. Thống kê độ trễ khứ hồi (RTT) theo mức QoS</h2>
+          <div class="action-inline">
+            <button id="btn-benchmark" class="btn btn-primary" disabled>Chạy đo 30 lệnh × 3 mức QoS</button>
+            <button id="btn-export" class="btn btn-outline">Xuất CSV</button>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Mức QoS</th>
+              <th>Số lệnh phát</th>
+              <th>Tỷ lệ phản hồi (%)</th>
+              <th>RTT nhỏ nhất (ms)</th>
+              <th>RTT lớn nhất (ms)</th>
+              <th>RTT trung bình (ms)</th>
+              <th>Độ lệch chuẩn SD (ms)</th>
+            </tr>
+          </thead>
+          <tbody id="summary-tbody">
+            <tr data-qos="0"><td>QoS 0</td><td>0</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr data-qos="1"><td>QoS 1</td><td>0</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr data-qos="2"><td>QoS 2</td><td>0</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          </tbody>
+        </table>
+
+        <h3 class="sub-heading">Nhật ký gói tin MQTT thời gian thực</h3>
+        <pre id="packet-log" class="log-box"></pre>
+      </div>
+    </section>
+
+    <!-- Khối 3: Bảng dữ liệu chi tiết 30 lần đo -->
+    <section class="card">
+      <h2>3. Bảng dữ liệu đo chi tiết từng lệnh (30 lần đo / mức QoS)</h2>
+      <div class="table-scroll">
+        <table class="data-table compact-table">
+          <thead>
+            <tr>
+              <th>Lần đo</th>
+              <th>QoS 0 (ms)</th>
+              <th>QoS 1 (ms)</th>
+              <th>QoS 2 (ms)</th>
+              <th>Lần đo</th>
+              <th>QoS 0 (ms)</th>
+              <th>QoS 1 (ms)</th>
+              <th>QoS 2 (ms)</th>
+            </tr>
+          </thead>
+          <tbody id="samples-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="/mqtt.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "mttqx-dt42-iot-mqtt",
+  "version": "1.0.0",
+  "description": "DT42: MQTT Device Control System with Closed-Loop State Feedback and QoS Latency (RTT) Evaluation",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "sim": "node simulator/esp32_node_sim.js",
+    "benchmark": "node benchmark/run_benchmark.js"
+  },
+  "dependencies": {
+    "aedes": "^0.51.3",
+    "mqtt": "^5.10.1",
+    "websocket-stream": "^5.5.2",
+    "ws": "^8.18.0"
+  }
+}
