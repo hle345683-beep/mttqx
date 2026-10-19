@@ -4,6 +4,7 @@
   "description": "DT42: MQTT Device Control System with Closed-Loop State Feedback and QoS Latency (RTT) Evaluation",
   "main": "server.js",
   "scripts": {
+    "demo": "node start_demo.js",
     "start": "node server.js",
     "sim": "node simulator/esp32_node_sim.js",
     "benchmark": "node benchmark/run_benchmark.js"
