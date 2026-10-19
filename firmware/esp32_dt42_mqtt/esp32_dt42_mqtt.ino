@@ -1,24 +1,34 @@
 /**
  * Đề tài ĐT42: Hệ thống điều khiển thiết bị sử dụng MQTT
- * Phần cứng: ESP32-WROOM-32 + Module Relay 1 kênh + Nút nhấn tại chỗ
- * Thư viện: WiFi.h (Espressif), MQTT.h (256dpi/arduino-mqtt), ArduinoJson.h
+ * Phần cứng: ESP32 + Module Relay + Nút nhấn tại chỗ
+ * Hỗ trợ đồng thời:
+ *   1. Kết nối Cloud EMQX Broker (broker.emqx.io:1883) để điều khiển từ Web trên đám mây
+ *   2. Phát Wi-Fi riêng "ESP32-DT42" (mật khẩu: 12345678) kèm trang đăng nhập Captive Portal (192.168.4.1)
  */
 
 #include <WiFi.h>
+#include <WebServer.h>
+#include <DNSServer.h>
 #include <MQTT.h>
 #include <ArduinoJson.h>
 
-// Cấu hình mạng Wi-Fi và MQTT Broker (EMQX)
+// 1. Cấu hình Wi-Fi nhà (Station) & Cloud EMQX Broker
 const char* WIFI_SSID     = "IOT_LAB_24GHz";
 const char* WIFI_PASSWORD = "password123";
-const char* MQTT_HOST     = "192.168.1.100";
+const char* MQTT_HOST     = "broker.emqx.io";
 const int   MQTT_PORT     = 1883;
 const char* MQTT_CLIENTID = "esp32_dt42_node";
 
+// 2. Cấu hình Wi-Fi phát ra từ ESP32 (Access Point) & Mật khẩu đăng nhập Web
+const char* AP_SSID       = "ESP32-DT42";
+const char* AP_PASS       = "12345678";
+const char* WEB_PASS      = "dt42";
+const char* CLOUD_WEB_URL = "https://hle345683-beep.github.io/mttqx/";
+
 // Định nghĩa chân GPIO
-const uint8_t PIN_RELAY  = 26; // Ngõ ra điều khiển Relay (mức HIGH đóng tiếp điểm NO)
-const uint8_t PIN_BUTTON = 27; // Ngõ vào nút nhấn tại chỗ (kéo lên nội INPUT_PULLUP)
-const uint8_t PIN_LED    = 2;  // LED báo trạng thái kết nối Broker
+const uint8_t PIN_RELAY  = 26;
+const uint8_t PIN_BUTTON = 27;
+const uint8_t PIN_LED    = 2;
 
 // Cấu trúc Topic
 const char* TOPIC_CMD    = "dt42/cmd";
@@ -27,116 +37,121 @@ const char* TOPIC_STATUS = "dt42/status";
 
 WiFiClient net;
 MQTTClient client(512);
+WebServer  portalServer(80);
+DNSServer  dnsServer;
 
 bool relayState = false;
 int  currentQoS = 1;
 
-// Biến chống dội phím (Debounce 50 ms)
 bool lastReading = HIGH;
 bool buttonStableState = HIGH;
 unsigned long lastDebounceTime = 0;
 const unsigned long DEBOUNCE_MS = 50;
 
-/**
- * Đọc trạng thái thực tế của chân điều khiển Relay và gửi bản tin phản hồi dt42/state
- */
-void publishActualState(uint32_t cmdId, uint64_t tSend, int qosLevel) {
+void publishActualState(uint64_t tSend, int qosLevel) {
   bool actualPin = (digitalRead(PIN_RELAY) == HIGH);
   relayState = actualPin;
 
   StaticJsonDocument<128> doc;
   doc["state"]  = actualPin ? "ON" : "OFF";
-  doc["cmd_id"] = cmdId;
   doc["t_send"] = tSend;
-  doc["qos"]    = qosLevel;
 
   char payload[128];
   serializeJson(doc, payload, sizeof(payload));
 
-  // Gửi bản tin trạng thái thực tế với cờ Retain = true và mức QoS tương ứng
-  client.publish(TOPIC_STATE, payload, true, qosLevel);
+  if (client.connected()) {
+    client.publish(TOPIC_STATE, payload, true, qosLevel);
+  }
 }
 
-/**
- * Hàm callback xử lý khi nhận bản tin từ MQTT Broker
- */
 void onMessageReceived(String &topic, String &payload) {
   if (topic != TOPIC_CMD) return;
 
   StaticJsonDocument<256> doc;
-  DeserializationError err = deserializeJson(doc, payload);
-  if (err) return;
+  if (deserializeJson(doc, payload)) return;
 
   const char* action = doc["action"] | "";
-  uint32_t cmdId     = doc["cmd_id"] | 0;
   uint64_t tSend     = doc["t_send"] | 0ULL;
-  int qos            = doc["qos"]    | currentQoS;
-
-  if (qos >= 0 && qos <= 2) {
-    currentQoS = qos;
-  }
 
   if (strcmp(action, "ON") == 0) {
     digitalWrite(PIN_RELAY, HIGH);
   } else if (strcmp(action, "OFF") == 0) {
     digitalWrite(PIN_RELAY, LOW);
-  } else if (strcmp(action, "TOGGLE") == 0) {
-    digitalWrite(PIN_RELAY, !digitalRead(PIN_RELAY));
   } else {
     return;
   }
 
-  // Bước 3: Đọc trạng thái thực tế của chân GPIO26 và phản hồi về dt42/state
-  publishActualState(cmdId, tSend, currentQoS);
+  publishActualState(tSend, currentQoS);
 }
 
-/**
- * Kết nối Wi-Fi và MQTT Broker kèm khai báo Last Will and Testament (LWT)
- */
+// Trang Web nhúng trực tiếp trên ESP32 khi kết nối Wi-Fi "ESP32-DT42" (http://192.168.4.1)
+void setupCaptivePortal() {
+  portalServer.on("/", HTTP_GET, []() {
+    String html = F(
+      "<!DOCTYPE html><html lang='vi'><head><meta charset='UTF-8'>"
+      "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+      "<title>ESP32 ĐT42 - Đăng nhập</title>"
+      "<style>body{font-family:Arial,sans-serif;background:#0f172a;color:#1e293b;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;padding:16px}"
+      ".card{background:#fff;padding:22px;border-radius:6px;max-width:380px;width:100%;border-top:4px solid #1b2a4a}"
+      "h2{font-size:16px;color:#1b2a4a;margin:0 0 8px}p{font-size:13px;color:#475569;margin:0 0 14px}"
+      "input,button,a.btn{width:100%;padding:9px;margin-top:8px;box-sizing:border-box;border-radius:4px;font-size:13.5px;text-align:center;display:block;text-decoration:none}"
+      "button{background:#1b2a4a;color:#fff;border:none;font-weight:bold;cursor:pointer}"
+      "a.btn{background:#f1f5f9;color:#1b2a4a;border:1px solid #cbd5e1;font-weight:bold}</style></head><body>"
+      "<div class='card'><h2>ĐỀ TÀI ĐT42 — CỔNG KẾT NỐI ESP32</h2>"
+      "<p>Bạn đang kết nối trực tiếp vào Wi-Fi của ESP32. Nhập mật khẩu để điều khiển hoặc mở Web Đám mây:</p>"
+      "<form action='/control' method='POST'>"
+      "<input type='password' name='pwd' placeholder='Mật khẩu (mặc định: dt42)' required>"
+      "<button type='submit' name='act' value='TOGGLE'>ĐĂNG NHẬP &amp; ĐẢO TRẠNG THÁI RELAY</button>"
+      "</form>"
+      "<a class='btn' href='https://hle345683-beep.github.io/mttqx/'>MỞ WEB DASHBOARD TRÊN ĐÁM MÂY</a>"
+      "</div></body></html>"
+    );
+    portalServer.send(200, "text/html; charset=utf-8", html);
+  });
+
+  portalServer.on("/control", HTTP_POST, []() {
+    if (portalServer.arg("pwd") != WEB_PASS) {
+      portalServer.send(403, "text/html; charset=utf-8", "<h3>Sai mật khẩu! <a href='/'>Quay lại</a></h3>");
+      return;
+    }
+    digitalWrite(PIN_RELAY, !digitalRead(PIN_RELAY));
+    publishActualState(0, currentQoS);
+    portalServer.sendHeader("Location", "/");
+    portalServer.send(303);
+  });
+
+  portalServer.onNotFound([]() {
+    portalServer.sendHeader("Location", String("http://192.168.4.1/"), true);
+    portalServer.send(302, "text/plain", "");
+  });
+
+  portalServer.begin();
+}
+
 void ensureConnected() {
-  if (WiFi.status() != WL_CONNECTED) {
+  if (WiFi.status() == WL_CONNECTED && !client.connected()) {
     digitalWrite(PIN_LED, LOW);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(250);
-    }
-  }
-
-  if (!client.connected()) {
-    digitalWrite(PIN_LED, LOW);
-    // Đăng ký LWT: Broker tự động phát {"online":false} (Retain=true, QoS=1) khi mất kết nối
     client.setWill(TOPIC_STATUS, "{\"online\":false}", true, 1);
-
-    while (!client.connect(MQTT_CLIENTID)) {
-      delay(500);
+    if (client.connect(MQTT_CLIENTID)) {
+      digitalWrite(PIN_LED, HIGH);
+      client.publish(TOPIC_STATUS, "{\"online\":true}", true, 1);
+      client.subscribe(TOPIC_CMD, 2);
+      publishActualState(0, 1);
     }
-
-    digitalWrite(PIN_LED, HIGH);
-    // Thông báo thiết bị trực tuyến (Retain=true, QoS=1)
-    client.publish(TOPIC_STATUS, "{\"online\":true}", true, 1);
-    // Đăng ký nhận lệnh ở mức QoS tối đa (QoS 2) để hỗ trợ mọi mức QoS thử nghiệm
-    client.subscribe(TOPIC_CMD, 2);
-    // Đồng bộ trạng thái thực tế ban đầu lên Broker
-    publishActualState(0, 0, 1);
   }
 }
 
-/**
- * Quét nút nhấn tại chỗ có chống dội phím (50 ms)
- */
 void pollLocalButton() {
   bool reading = digitalRead(PIN_BUTTON);
   if (reading != lastReading) {
     lastDebounceTime = millis();
   }
-
   if ((millis() - lastDebounceTime) > DEBOUNCE_MS) {
     if (reading != buttonStableState) {
       buttonStableState = reading;
-      if (buttonStableState == LOW) { // Nhấn nút (mức tích cực thấp)
+      if (buttonStableState == LOW) {
         digitalWrite(PIN_RELAY, !digitalRead(PIN_RELAY));
-        // Nút nhấn tại chỗ: cmd_id = 0, t_send = 0
-        publishActualState(0, 0, currentQoS);
+        publishActualState(0, currentQoS);
       }
     }
   }
@@ -151,18 +166,22 @@ void setup() {
   pinMode(PIN_LED, OUTPUT);
   digitalWrite(PIN_LED, LOW);
 
-  WiFi.mode(WIFI_STA);
+  // Vừa phát Wi-Fi riêng "ESP32-DT42" (192.168.4.1), vừa kết nối Wi-Fi Internet tới Cloud EMQX
+  WiFi.mode(WIFI_AP_STA);
+  WiFi.softAP(AP_SSID, AP_PASS);
+  dnsServer.start(53, "*", WiFi.softAPIP());
+  setupCaptivePortal();
+
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   client.begin(MQTT_HOST, MQTT_PORT, net);
   client.onMessage(onMessageReceived);
-  client.setOptions(15, true, 3000); // Keep-alive 15s, cleanSession=true, timeout 3000ms
-
-  ensureConnected();
+  client.setOptions(15, true, 3000);
 }
 
 void loop() {
+  dnsServer.processNextRequest();
+  portalServer.handleClient();
   client.loop();
-  if (!client.connected()) {
-    ensureConnected();
-  }
+  ensureConnected();
   pollLocalButton();
 }

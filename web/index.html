@@ -3,10 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ĐT42 — Hệ thống điều khiển thiết bị và đánh giá độ trễ MQTT</title>
+  <title>ĐT42 — Hệ thống điều khiển thiết bị sử dụng MQTT</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Màn hình đăng nhập bảo mật -->
+  <div id="login-overlay" class="login-overlay">
+    <div class="login-card">
+      <div class="login-header">
+        <h2>ĐỀ TÀI ĐT42 — ĐĂNG NHẬP HỆ THỐNG</h2>
+        <p>Hệ thống điều khiển thiết bị sử dụng MQTT</p>
+      </div>
+      <form id="login-form" class="login-form">
+        <label for="login-pass">Mật khẩu truy cập:</label>
+        <input id="login-pass" type="password" placeholder="Nhập mật khẩu (mặc định: dt42)" autocomplete="current-password" required>
+        <p id="login-error" class="login-error" hidden>Mật khẩu không đúng. Vui lòng thử lại (mặc định: dt42 hoặc 123456).</p>
+        <button type="submit" class="btn btn-primary btn-full">ĐĂNG NHẬP</button>
+      </form>
+      <div class="login-hint">
+        <span>Chế độ hoạt động: <strong>Cloud EMQX Broker 24/7</strong> (không cần bật máy tính) hoặc <strong>Local Broker</strong></span>
+      </div>
+    </div>
+  </div>
+
   <header class="topbar">
     <div>
       <h1>ĐỀ TÀI ĐT42: HỆ THỐNG ĐIỀU KHIỂN THIẾT BỊ SỬ DỤNG MQTT</h1>
@@ -15,6 +34,7 @@
     <div class="status-badges">
       <span id="broker-badge" class="badge badge-offline">Broker: Ngắt kết nối</span>
       <span id="esp32-badge" class="badge badge-offline">ESP32 (LWT): Offline</span>
+      <button id="btn-logout" class="btn btn-outline btn-sm" title="Đăng xuất">Đăng xuất</button>
     </div>
   </header>
 
@@ -25,13 +45,21 @@
         <h2>1. Bảng điều khiển &amp; Phản hồi trạng thái thực tế</h2>
         <div class="config-row">
           <label for="broker-url">WebSocket Broker:</label>
-          <input id="broker-url" type="text" value="ws://127.0.0.1:8083/mqtt">
+          <input id="broker-url" type="text" value="wss://broker.emqx.io:8084/mqtt">
+          <button id="btn-reconnect" class="btn btn-outline btn-sm" type="button">Kết nối</button>
           <label for="qos-select">Mức QoS:</label>
           <select id="qos-select">
             <option value="0">QoS 0 (At most once)</option>
             <option value="1" selected>QoS 1 (At least once)</option>
             <option value="2">QoS 2 (Exactly once)</option>
           </select>
+        </div>
+
+        <div class="config-row sim-toggle-row">
+          <label class="checkbox-label">
+            <input id="cloud-sim-toggle" type="checkbox" checked>
+            <span>Bật ESP32 ảo trên Cloud (tự động phản hồi <code>dt42/state</code> khi chưa cắm mạch ESP32 thật)</span>
+          </label>
         </div>
 
         <div class="state-box">
@@ -44,7 +72,7 @@
             <strong id="last-rtt" class="state-value">— ms</strong>
           </div>
           <div class="state-item">
-            <span class="label">Mã phiên lệnh (cmd_id):</span>
+            <span class="label">Số lệnh đã phát:</span>
             <strong id="last-cmd-id" class="state-value">0</strong>
           </div>
         </div>
@@ -52,15 +80,15 @@
         <div class="btn-group">
           <button id="btn-on" class="btn btn-primary" disabled>BẬT THIẾT BỊ (ON)</button>
           <button id="btn-off" class="btn btn-secondary" disabled>TẮT THIẾT BỊ (OFF)</button>
-          <button id="btn-local" class="btn btn-outline" disabled>Mô phỏng Nút nhấn tại chỗ (GPIO27)</button>
+          <button id="btn-local" class="btn btn-outline" disabled>Nút nhấn tại chỗ (GPIO27)</button>
         </div>
-        <p class="note">Ghi chú: Giao diện chỉ cập nhật trạng thái hiển thị khi nhận được bản tin phản hồi từ topic <code>dt42/state</code>. Khi nhận bản tin từ nút nhấn tại chỗ (<code>t_send = 0</code>) hoặc bản tin Retain khi mới tải trang, hệ thống đồng bộ trạng thái nhưng không tính vào thống kê RTT.</p>
+        <p class="note">Ghi chú: Giao diện chỉ cập nhật trạng thái hiển thị khi nhận được bản tin phản hồi từ topic <code>dt42/state</code>. Khi nhận bản tin từ nút nhấn tại chỗ (<code>t_send = 0</code>) hoặc bản tin Retain khi mới tải trang, hệ thống đồng bộ trạng thái và không tính RTT.</p>
       </div>
 
       <!-- Khối 2: Bảng tổng hợp thống kê RTT theo mức QoS -->
       <div class="card">
         <div class="card-header-inline">
-          <h2>2. Thống kê độ trễ khứ hồi (RTT) theo mức QoS</h2>
+          <h2>2. Kết quả đo RTT theo mức QoS</h2>
           <div class="action-inline">
             <button id="btn-benchmark" class="btn btn-primary" disabled>Chạy đo 30 lệnh × 3 mức QoS</button>
             <button id="btn-export" class="btn btn-outline">Xuất CSV</button>
@@ -75,13 +103,12 @@
               <th>RTT nhỏ nhất (ms)</th>
               <th>RTT lớn nhất (ms)</th>
               <th>RTT trung bình (ms)</th>
-              <th>Độ lệch chuẩn SD (ms)</th>
             </tr>
           </thead>
           <tbody id="summary-tbody">
-            <tr data-qos="0"><td>QoS 0</td><td>0</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-            <tr data-qos="1"><td>QoS 1</td><td>0</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-            <tr data-qos="2"><td>QoS 2</td><td>0</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr data-qos="0"><td>QoS 0</td><td>0</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr data-qos="1"><td>QoS 1</td><td>0</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr data-qos="2"><td>QoS 2</td><td>0</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
           </tbody>
         </table>
 
@@ -92,7 +119,7 @@
 
     <!-- Khối 3: Bảng dữ liệu chi tiết 30 lần đo -->
     <section class="card">
-      <h2>3. Bảng dữ liệu đo chi tiết từng lệnh (30 lần đo / mức QoS)</h2>
+      <h2>3. Giá trị RTT của từng lần đo (30 lần đo / mức QoS)</h2>
       <div class="table-scroll">
         <table class="data-table compact-table">
           <thead>
@@ -113,7 +140,7 @@
     </section>
   </main>
 
-  <script src="/mqtt.min.js"></script>
+  <script src="mqtt.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
