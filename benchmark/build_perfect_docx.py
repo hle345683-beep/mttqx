@@ -21,20 +21,25 @@ ET.register_namespace('r', R_NS)
 def wtag(name):
     return f"{{{W_NS}}}{name}"
 
-def make_run(text, bold=False, italic=False, vert=None, style=None, no_proof=False, web_hidden=False):
+def make_run(text, bold=False, italic=False, vert=None, style=None, no_proof=False, web_hidden=False, sz=None):
     r = ET.Element(wtag('r'))
-    if any([bold, italic, vert, style, no_proof, web_hidden]):
+    if any([bold, italic, vert, style, no_proof, web_hidden, sz]):
         rPr = ET.SubElement(r, wtag('rPr'))
         if style:
             ET.SubElement(rPr, wtag('rStyle'), {wtag('val'): style})
         if bold:
             ET.SubElement(rPr, wtag('b'))
+            ET.SubElement(rPr, wtag('bCs'))
         if italic:
             ET.SubElement(rPr, wtag('i'))
+            ET.SubElement(rPr, wtag('iCs'))
         if no_proof:
             ET.SubElement(rPr, wtag('noProof'))
         if web_hidden:
             ET.SubElement(rPr, wtag('webHidden'))
+        if sz:
+            ET.SubElement(rPr, wtag('sz'), {wtag('val'): str(sz)})
+            ET.SubElement(rPr, wtag('szCs'), {wtag('val'): str(sz)})
         if vert:
             ET.SubElement(rPr, wtag('vertAlign'), {wtag('val'): vert})
     t = ET.SubElement(r, wtag('t'))
@@ -45,10 +50,8 @@ def make_run(text, bold=False, italic=False, vert=None, style=None, no_proof=Fal
 
 def make_para(runs_spec=None, style=None, jc=None, first_line='720', left=None, hanging=None,
               num_id=None, ilvl='0', page_break=False, keep_next=False, keep_lines=False,
-              bm_id=None, bm_name=None, tabs=None, space_before=None, space_after=None):
-    """
-    runs_spec: list of tuples (text, dict_opts) or plain strings, or ('TAB', {})
-    """
+              bm_id=None, bm_name=None, tabs=None, space_before=None, space_after=None,
+              line_spacing=None, snap_to_grid=True, outline_lvl=None):
     p = ET.Element(wtag('p'))
     pPr = ET.SubElement(p, wtag('pPr'))
     if style:
@@ -59,6 +62,8 @@ def make_para(runs_spec=None, style=None, jc=None, first_line='720', left=None, 
         ET.SubElement(pPr, wtag('keepNext'))
     if keep_lines:
         ET.SubElement(pPr, wtag('keepLines'))
+    if not snap_to_grid:
+        ET.SubElement(pPr, wtag('snapToGrid'), {wtag('val'): '0'})
     if num_id is not None:
         numPr = ET.SubElement(pPr, wtag('numPr'))
         ET.SubElement(numPr, wtag('ilvl'), {wtag('val'): str(ilvl)})
@@ -70,12 +75,15 @@ def make_para(runs_spec=None, style=None, jc=None, first_line='720', left=None, 
             if t_leader:
                 attrib[wtag('leader')] = t_leader
             ET.SubElement(tabs_el, wtag('tab'), attrib)
-    if space_before is not None or space_after is not None:
+    if any(x is not None for x in [space_before, space_after, line_spacing]):
         sp_attr = {}
         if space_before is not None:
             sp_attr[wtag('before')] = str(space_before)
         if space_after is not None:
             sp_attr[wtag('after')] = str(space_after)
+        if line_spacing is not None:
+            sp_attr[wtag('line')] = str(line_spacing)
+            sp_attr[wtag('lineRule')] = 'auto'
         ET.SubElement(pPr, wtag('spacing'), sp_attr)
     ind_attr = {}
     if left is not None:
@@ -88,6 +96,8 @@ def make_para(runs_spec=None, style=None, jc=None, first_line='720', left=None, 
         ET.SubElement(pPr, wtag('ind'), ind_attr)
     if jc:
         ET.SubElement(pPr, wtag('jc'), {wtag('val'): jc})
+    if outline_lvl is not None:
+        ET.SubElement(pPr, wtag('outlineLvl'), {wtag('val'): str(outline_lvl)})
 
     if bm_id is not None and bm_name is not None:
         ET.SubElement(p, wtag('bookmarkStart'), {wtag('id'): str(bm_id), wtag('name'): bm_name})
@@ -112,8 +122,11 @@ def make_para(runs_spec=None, style=None, jc=None, first_line='720', left=None, 
 def make_heading(text, level=1, bm_id=101, bm_name="_Toc3000001", page_break=False, unnumbered=False):
     if level == 1:
         if unnumbered:
-            return make_para([text], style='Heading1', jc='center', first_line=None, left='2155', hanging='2155',
-                             num_id='0', ilvl='0', page_break=page_break, bm_id=bm_id, bm_name=bm_name)
+            # Do NOT use Heading1 or numPr so viewers never attach a bullet/dash
+            return make_para([(text, {'bold': True, 'sz': 32})], style=None, jc='center',
+                             first_line='0', left='0', page_break=page_break,
+                             keep_next=True, keep_lines=True, space_before=240, space_after=480,
+                             outline_lvl=0, bm_id=bm_id, bm_name=bm_name)
         return make_para([text], style='Heading1', jc='center', first_line=None,
                          page_break=page_break, bm_id=bm_id, bm_name=bm_name)
     elif level == 2:
@@ -122,10 +135,6 @@ def make_heading(text, level=1, bm_id=101, bm_name="_Toc3000001", page_break=Fal
         return make_para([text], style='Heading3', first_line=None, keep_next=True, bm_id=bm_id, bm_name=bm_name)
 
 def make_caption(kind, chap_num, seq_num, title_text, bm_id=None, bm_name=None):
-    """
-    kind: 'Hình' or 'Bảng'
-    Uses STYLEREF 1 \\s and SEQ Hình/Bảng \\* ARABIC \\s 1 exactly like Mẫu báo cáo
-    """
     p = ET.Element(wtag('p'))
     pPr = ET.SubElement(p, wtag('pPr'))
     ET.SubElement(pPr, wtag('pStyle'), {wtag('val'): 'Caption'})
@@ -150,14 +159,14 @@ def make_caption(kind, chap_num, seq_num, title_text, bm_id=None, bm_name=None):
 
     return p
 
-def make_image_para(rid, doc_id, filename, descr, img_path, max_width_emu=5580000, max_height_emu=4350000):
+def make_image_para(rid, doc_id, filename, descr, img_path, target_cx=5486400, max_cy=4200000):
     with Image.open(img_path) as im:
         w_px, h_px = im.size
     aspect = h_px / float(w_px)
-    cx = max_width_emu
+    cx = target_cx
     cy = int(cx * aspect)
-    if cy > max_height_emu:
-        cy = max_height_emu
+    if cy > max_cy:
+        cy = max_cy
         cx = int(cy / aspect)
 
     xml_str = f'''<w:p xmlns:w="{W_NS}" xmlns:wp="{WP_NS}" xmlns:a="{A_NS}" xmlns:pic="{PIC_NS}" xmlns:r="{R_NS}">
@@ -201,7 +210,7 @@ def make_image_para(rid, doc_id, filename, descr, img_path, max_width_emu=558000
     </w:p>'''
     return ET.fromstring(xml_str)
 
-def make_table(col_widths, headers, rows, col_aligns=None, keep_with_caption=True):
+def make_table(col_widths, headers, rows, col_aligns=None, keep_with_caption=True, cell_pad=40):
     total_w = sum(col_widths)
     tbl = ET.Element(wtag('tbl'))
     tblPr = ET.SubElement(tbl, wtag('tblPr'))
@@ -229,7 +238,8 @@ def make_table(col_widths, headers, rows, col_aligns=None, keep_with_caption=Tru
         ET.SubElement(tcPr, wtag('tcW'), {wtag('w'): str(col_widths[idx]), wtag('type'): 'dxa'})
         ET.SubElement(tcPr, wtag('shd'), {wtag('val'): 'clear', wtag('color'): 'auto', wtag('fill'): 'E7E6E6', wtag('themeFill'): 'background2'})
         ET.SubElement(tcPr, wtag('vAlign'), {wtag('val'): 'center'})
-        p = make_para([(h_text, {'bold': True})], first_line='0', jc='center', keep_next=True, space_before=40, space_after=40)
+        p = make_para([(h_text, {'bold': True})], first_line='0', jc='center', keep_next=True,
+                      space_before=cell_pad, space_after=cell_pad, line_spacing=240, snap_to_grid=False)
         tc.append(p)
 
     # Data rows
@@ -248,7 +258,8 @@ def make_table(col_widths, headers, rows, col_aligns=None, keep_with_caption=Tru
                 runs = cell_val
             else:
                 runs = [str(cell_val)]
-            p = make_para(runs, first_line='0', jc=align, keep_next=(is_last and keep_with_caption), space_before=40, space_after=40)
+            p = make_para(runs, first_line='0', jc=align, keep_next=(is_last and keep_with_caption),
+                          space_before=cell_pad, space_after=cell_pad, line_spacing=240, snap_to_grid=False)
             tc.append(p)
 
     return tbl
@@ -257,8 +268,10 @@ def make_tof_entry(caption_full_text, bm_name, page_str, is_first_for_kind=None)
     p = ET.Element(wtag('p'))
     pPr = ET.SubElement(p, wtag('pPr'))
     ET.SubElement(pPr, wtag('pStyle'), {wtag('val'): 'TableofFigures'})
+    ET.SubElement(pPr, wtag('snapToGrid'), {wtag('val'): '0'})
     tabs = ET.SubElement(pPr, wtag('tabs'))
-    ET.SubElement(tabs, wtag('tab'), {wtag('val'): 'right', wtag('leader'): 'dot', wtag('pos'): '8778'})
+    ET.SubElement(tabs, wtag('tab'), {wtag('val'): 'right', wtag('leader'): 'dot', wtag('pos'): '8700'})
+    ET.SubElement(pPr, wtag('spacing'), {wtag('before'): '0', wtag('after'): '60', wtag('line'): '240', wtag('lineRule'): 'auto'})
 
     if is_first_for_kind:
         r_b = ET.SubElement(p, wtag('r'))
@@ -298,9 +311,6 @@ def make_tof_entry(caption_full_text, bm_name, page_str, is_first_for_kind=None)
     return p
 
 def update_toc_sdt(sdt_el, toc_entries):
-    """
-    toc_entries: list of (level, prefix_or_none, title, bm_name, page_str)
-    """
     sdt_content = sdt_el.find(wtag('sdtContent'))
     old_ps = list(sdt_content)
     first_p = old_ps[0] # Title "MỤC LỤC"
@@ -312,10 +322,18 @@ def update_toc_sdt(sdt_el, toc_entries):
         p = ET.Element(wtag('p'))
         pPr = ET.SubElement(p, wtag('pPr'))
         ET.SubElement(pPr, wtag('pStyle'), {wtag('val'): f'TOC{lvl}'})
-        if lvl == 2:
-            tabs = ET.SubElement(pPr, wtag('tabs'))
+        ET.SubElement(pPr, wtag('snapToGrid'), {wtag('val'): '0'})
+        tabs = ET.SubElement(pPr, wtag('tabs'))
+        if lvl == 1:
+            if prefix:
+                ET.SubElement(tabs, wtag('tab'), {wtag('val'): 'left', wtag('pos'): '1760'})
+            else:
+                ET.SubElement(tabs, wtag('tab'), {wtag('val'): 'clear', wtag('pos'): '1760'})
+            ET.SubElement(tabs, wtag('tab'), {wtag('val'): 'right', wtag('leader'): 'dot', wtag('pos'): '8700'})
+        elif lvl == 2:
             ET.SubElement(tabs, wtag('tab'), {wtag('val'): 'left', wtag('pos'): '880'})
-            ET.SubElement(tabs, wtag('tab'), {wtag('val'): 'right', wtag('leader'): 'dot', wtag('pos'): '8778'})
+            ET.SubElement(tabs, wtag('tab'), {wtag('val'): 'right', wtag('leader'): 'dot', wtag('pos'): '8700'})
+        ET.SubElement(pPr, wtag('spacing'), {wtag('before'): '0', wtag('after'): '45', wtag('line'): '240', wtag('lineRule'): 'auto'})
 
         if idx == 0:
             r_b = ET.SubElement(p, wtag('r'))
@@ -361,8 +379,13 @@ def update_toc_sdt(sdt_el, toc_entries):
     sdt_content.append(last_p)
 
 def build_docx():
-    src_docx = r'D:\dow\Báo cáo\Bao_cao_cuoi_ky_IoT_DT42_MQTT (1).docx'
-    fig_dir  = r'C:\Users\Admin\Documents\GitHub\mttqx\docs\figures'
+    # Use the clean Microsoft Word base (untouched by WPS styleId renumbering)
+    orig_repo_docx = r'C:\Users\Admin\Documents\GitHub\mttqx\docs\Bao_cao_cuoi_ky_IoT_DT42_MQTT.docx'
+    base_docx = r'C:\Users\Admin\.gemini\antigravity\brain\5ef0533e-a719-45a4-93d6-1f2b291b36ce\scratch\base_word_clean.docx'
+    if not os.path.exists(base_docx):
+        shutil.copyfile(orig_repo_docx, base_docx)
+    orig_fig_dir = r'C:\Users\Admin\.gemini\antigravity\brain\5ef0533e-a719-45a4-93d6-1f2b291b36ce\scratch\baocao_media\word\media'
+    repo_fig_dir = r'C:\Users\Admin\Documents\GitHub\mttqx\docs\figures'
     res_json = r'C:\Users\Admin\Documents\GitHub\mttqx\benchmark\results.json'
 
     with open(res_json, 'r', encoding='utf-8') as f:
@@ -378,15 +401,15 @@ def build_docx():
     def fmt(val):
         return f"{val:.2f}".replace('.', ',')
 
-    work_dir = r'C:\Users\Admin\.gemini\antigravity\brain\5ef0533e-a719-45a4-93d6-1f2b291b36ce\scratch\docx_build'
+    work_dir = r'C:\Users\Admin\.gemini\antigravity\brain\5ef0533e-a719-45a4-93d6-1f2b291b36ce\scratch\docx_clean_build'
     if os.path.exists(work_dir):
         shutil.rmtree(work_dir)
     os.makedirs(work_dir, exist_ok=True)
 
-    with zipfile.ZipFile(src_docx, 'r') as z:
+    with zipfile.ZipFile(base_docx, 'r') as z:
         z.extractall(work_dir)
 
-    # Copy all 8 figures into word/media/
+    # Copy the 7 clean original figures into word/media/ and docs/figures/
     media_dir = os.path.join(work_dir, 'word', 'media')
     os.makedirs(media_dir, exist_ok=True)
     fig_files = [
@@ -397,23 +420,32 @@ def build_docx():
         ('rId504', 'hinh_3_3_luu_do_esp32.png'),
         ('rId505', 'hinh_3_4_luu_do_web.png'),
         ('rId506', 'hinh_4_1_so_do_lap_rap.png'),
-        ('rId507', 'hinh_4_2_bieu_do_rtt.png')
     ]
     for rid, fname in fig_files:
-        shutil.copyfile(os.path.join(fig_dir, fname), os.path.join(media_dir, fname))
+        src_f = os.path.join(orig_fig_dir, fname)
+        shutil.copyfile(src_f, os.path.join(media_dir, fname))
+        shutil.copyfile(src_f, os.path.join(repo_fig_dir, fname))
 
-    # Add rId507 to word/_rels/document.xml.rels if not present
+    # Remove unused hinh_4_2_bieu_do_rtt.png from media_dir and document.xml.rels
+    extra_fig = os.path.join(media_dir, 'hinh_4_2_bieu_do_rtt.png')
+    if os.path.exists(extra_fig):
+        os.remove(extra_fig)
+
     rels_path = os.path.join(work_dir, 'word', '_rels', 'document.xml.rels')
     rels_tree = ET.parse(rels_path)
     rels_root = rels_tree.getroot()
-    existing_ids = {r.attrib.get('Id') for r in rels_root}
-    if 'rId507' not in existing_ids:
-        ET.SubElement(rels_root, f"{{{REL_NS}}}Relationship", {
-            'Id': 'rId507',
-            'Type': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image',
-            'Target': 'media/hinh_4_2_bieu_do_rtt.png'
-        })
+    for r in list(rels_root):
+        if r.attrib.get('Id') == 'rId507':
+            rels_root.remove(r)
     rels_tree.write(rels_path, encoding='utf-8', xml_declaration=True)
+
+    # Remove stray cached 'v' and '8' in footer3.xml and footer4.xml so viewers don't show 'v' at end of file
+    for ftr_name in ['footer3.xml', 'footer4.xml']:
+        ftr_path = os.path.join(work_dir, 'word', ftr_name)
+        if os.path.exists(ftr_path):
+            ftr_txt = open(ftr_path, 'r', encoding='utf-8').read()
+            ftr_txt = ftr_txt.replace('<w:t>v</w:t>', '<w:t></w:t>').replace('<w:t>8</w:t>', '<w:t></w:t>')
+            open(ftr_path, 'w', encoding='utf-8').write(ftr_txt)
 
     # Parse word/document.xml
     doc_path = os.path.join(work_dir, 'word', 'document.xml')
@@ -423,24 +455,48 @@ def build_docx():
     children = list(body)
 
     # 1. Fix Cover Pages (Elements 0..52)
-    # Update "Giảng viên hướng dẫn: Nguyễn Lê Thái" -> "Giảng viên hướng dẫn: TS. Nguyễn Lê Thái"
-    # Update "Tp. Hồ Chí Minh, ngày    tháng    năm 2026" -> "Tp. Hồ Chí Minh, ngày 19 tháng 10 năm 2026"
+    # - Keep "Giảng viên hướng dẫn: Nguyễn Lê Thái" as in user's original cover
+    # - Fix topic title [7] and [25]: set sz="30" (15pt) so "HỆ THỐNG ĐIỀU KHIỂN THIẾT BỊ SỬ DỤNG MQTT" stays on 1 line
+    # - Fix cover borders in [17] and split Section 2 right after [34] so both Cover 1 and Cover 2 have unconditional frame borders and Table 35 starts cleanly on Page 3 without a border
     for idx in range(0, 53):
         el = children[idx]
         full_txt = ''.join(el.itertext())
         if 'Giảng viên hướng dẫn:' in full_txt:
             for t in el.findall(f".//{wtag('t')}"):
-                if t.text and 'Nguyễn Lê Thái' in t.text and 'TS.' not in t.text:
-                    t.text = t.text.replace('Nguyễn Lê Thái', 'TS. Nguyễn Lê Thái')
-        if 'ngày' in full_txt and 'tháng' in full_txt and '2026' in full_txt:
-            # Replace runs in this paragraph with clean date
-            pPr = el.find(wtag('pPr'))
-            el.clear()
-            if pPr is not None:
-                el.append(pPr)
-            el.append(make_run("Tp. Hồ Chí Minh, ngày 19 tháng 10 năm 2026", italic=True))
+                if t.text and 'TS. Nguyễn Lê Thái' in t.text:
+                    t.text = t.text.replace('TS. Nguyễn Lê Thái', 'Nguyễn Lê Thái')
+        if 'HỆ THỐNG ĐIỀU KHIỂN THIẾT BỊ SỬ DỤNG MQTT' in full_txt:
+            for sz_el in el.findall(f".//{wtag('sz')}") + el.findall(f".//{wtag('szCs')}"):
+                sz_el.set(wtag('val'), '30')
 
-    # Keep elements 0..55 (up to DANH MỤC HÌNH ẢNH title at 55)
+    # Make sure Cover 1 ([17]) and Cover 2 ([34]) have unconditional pgBorders (remove w:display="firstPage" and add <w:titlePg/> so WPS/Word always render the frame on the 1-page cover section)
+    for sec_idx in [17, 39]:
+        sect = children[sec_idx].find(f".//{wtag('sectPr')}")
+        if sect is not None:
+            pgb = sect.find(wtag('pgBorders'))
+            if pgb is not None:
+                if wtag('display') in pgb.attrib:
+                    del pgb.attrib[wtag('display')]
+                pgb.set(wtag('offsetFrom'), 'text')
+                for side in pgb:
+                    side.set(wtag('color'), '000000')
+
+    # Now split Section 2 right after [34] ("TP.Hồ Chí Minh, tháng 10 / 2026"):
+    # Put a copy of [17]'s sectPr on [34], and remove pgBorders from [39] (which ends Page 3 with Table 35 & 37)
+    sect_cover1 = children[17].find(f".//{wtag('sectPr')}")
+    sect_cover2_copy = ET.fromstring(ET.tostring(sect_cover1, encoding='unicode'))
+    p34_pPr = children[34].find(wtag('pPr'))
+    if p34_pPr.find(wtag('sectPr')) is None:
+        p34_pPr.append(sect_cover2_copy)
+
+    # Remove pgBorders from [39] so Page 3 (Table 35 & Table 37) has NO cover frame border
+    sect_p39 = children[39].find(f".//{wtag('sectPr')}")
+    if sect_p39 is not None:
+        pgb39 = sect_p39.find(wtag('pgBorders'))
+        if pgb39 is not None:
+            sect_p39.remove(pgb39)
+
+    # Update TOC ([53])
     toc_sdt = children[53]
     toc_entries = [
         (1, 'CHƯƠNG 1.', 'TỔNG QUAN ĐỀ TÀI', '_Toc3000001', '1'),
@@ -450,118 +506,125 @@ def build_docx():
         (1, 'CHƯƠNG 2.', 'CƠ SỞ LÝ THUYẾT', '_Toc3000005', '2'),
         (2, '2.1.', 'Giao thức MQTT và mô hình Publish/Subscribe', '_Toc3000006', '2'),
         (2, '2.2.', 'Các mức chất lượng dịch vụ (QoS)', '_Toc3000008', '3'),
-        (2, '2.3.', 'Độ trễ truyền thông khứ hồi (RTT)', '_Toc3000011', '4'),
+        (2, '2.3.', 'Độ trễ truyền thông', '_Toc3000011', '4'),
         (1, 'CHƯƠNG 3.', 'THIẾT KẾ HỆ THỐNG', '_Toc3000012', '5'),
         (2, '3.1.', 'Sơ đồ khối và nguyên lý hoạt động', '_Toc3000013', '5'),
-        (2, '3.2.', 'Thiết kế cấu trúc topic và định dạng gói tin', '_Toc3000015', '5'),
+        (2, '3.2.', 'Thiết kế topic và gói tin', '_Toc3000015', '6'),
         (2, '3.3.', 'Quy trình xử lý và lưu đồ thuật toán', '_Toc3000017', '6'),
         (1, 'CHƯƠNG 4.', 'THỰC NGHIỆM VÀ ĐÁNH GIÁ ĐỘ TRỄ', '_Toc3000021', '9'),
         (2, '4.1.', 'Mô hình thực nghiệm', '_Toc3000022', '9'),
-        (2, '4.2.', 'Kiểm thử chức năng điều khiển và phản hồi trạng thái', '_Toc3000025', '10'),
-        (2, '4.3.', 'Kết quả đo và đánh giá độ trễ truyền thông', '_Toc3000027', '10'),
-        (1, 'CHƯƠNG 5.', 'KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN', '_Toc3000029', '12'),
-        (2, '5.1.', 'Kết luận', '_Toc3000030', '12'),
-        (2, '5.2.', 'Hướng phát triển', '_Toc3000031', '12'),
-        (1, None, 'DANH MỤC TÀI LIỆU THAM KHẢO', '_Toc3000032', '13'),
-        (1, None, 'PHỤ LỤC', '_Toc3000033', '14'),
+        (2, '4.2.', 'Kiểm thử chức năng', '_Toc3000025', '10'),
+        (2, '4.3.', 'Đo độ trễ truyền thông', '_Toc3000027', '10'),
+        (1, 'CHƯƠNG 5.', 'KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN', '_Toc3000029', '11'),
+        (2, '5.1.', 'Kết luận', '_Toc3000030', '11'),
+        (2, '5.2.', 'Hướng phát triển', '_Toc3000031', '11'),
+        (1, None, 'DANH MỤC TÀI LIỆU THAM KHẢO', '_Toc3000032', '12'),
+        (1, None, 'PHỤ LỤC', '_Toc3000033', '13'),
     ]
     update_toc_sdt(toc_sdt, toc_entries)
 
-    # Preserve special elements from original document:
-    tof_end_para_1 = children[63] # closes TOC "Hình"
-    title_bang     = children[65] # DANH MỤC BẢNG BIỂU
-    tof_end_para_2 = children[71] # closes TOC "Bảng"
-    title_tvt      = children[74] # DANH MỤC TỪ VIẾT TẮT
-    sect_break_p78 = children[78] # Section break before Chapter 1 (ends Roman numbering)
-    ref_table_178  = children[178] # IEEE references table
-    final_sectPr   = children[183] # Final body sectPr
+    # Locate preserved elements in base_docx (note indices in base_docx have +1 after 63 because base_docx had 8 figures)
+    tof_end_para_1 = children[64] # closes TOC "Hình"
+    page_brk_65    = children[65]
+    title_bang     = children[66] # DANH MỤC BẢNG BIỂU
+    tof_end_para_2 = children[72] # closes TOC "Bảng"
+    empty_73       = children[73]
+    page_brk_74    = children[74]
+    title_tvt      = children[75] # DANH MỤC TỪ VIẾT TẮT
+    empty_77       = children[77]
+    page_brk_78    = children[78]
+    sect_break_p79 = children[79] # Section break before Chapter 1 (ends Roman numbering)
+    ref_table      = children[179] # IEEE references table
+    final_sectPr   = children[184] # Final body sectPr
 
-    # Rebuild body from index 56 onwards
+    # Also remove numPr from sect_break_p79 if any
+    s79_pPr = sect_break_p79.find(wtag('pPr'))
+    if s79_pPr is not None:
+        for t_rm in [wtag('pStyle'), wtag('numPr')]:
+            el_rm = s79_pPr.find(t_rm)
+            if el_rm is not None:
+                s79_pPr.remove(el_rm)
+
     new_body_tail = []
 
-    # --- DANH MỤC HÌNH ẢNH entries ---
+    # --- DANH MỤC HÌNH ẢNH entries (7 original concise titles) ---
     fig_list = [
-        ("Hình 2.1. Mô hình truyền thông Publish/Subscribe trong MQTT", "_Toc3000007", "2", "Hình"),
-        ("Hình 2.2. Trình tự trao đổi gói tin điều khiển của ba mức QoS", "_Toc3000009", "3", None),
-        ("Hình 3.1. Sơ đồ khối kiến trúc hệ thống điều khiển và giám sát", "_Toc3000014", "5", None),
-        ("Hình 3.2. Trình tự xử lý một lệnh điều khiển và đo độ trễ RTT", "_Toc3000018", "6", None),
-        ("Hình 3.3. Lưu đồ thuật toán chương trình trên vi điều khiển ESP32", "_Toc3000019", "7", None),
-        ("Hình 3.4. Lưu đồ thuật toán xử lý trên giao diện Web Dashboard", "_Toc3000020", "8", None),
-        ("Hình 4.1. Sơ đồ đấu nối phần cứng và kết nối mạng mô hình thực nghiệm", "_Toc3000024", "9", None),
-        ("Hình 4.2. Biểu đồ kết quả đo RTT qua 30 lần đo và phân bố thống kê theo mức QoS", "_Toc3000034", "11", None),
+        ("Hình 2.1. Mô hình Publish/Subscribe", "_Toc3000007", "2", "Hình"),
+        ("Hình 2.2. Trình tự gói tin của các mức QoS", "_Toc3000009", "3", None),
+        ("Hình 3.1. Sơ đồ khối hệ thống", "_Toc3000014", "5", None),
+        ("Hình 3.2. Trình tự xử lý một lệnh điều khiển", "_Toc3000018", "6", None),
+        ("Hình 3.3. Lưu đồ chương trình trên ESP32", "_Toc3000019", "7", None),
+        ("Hình 3.4. Lưu đồ xử lý trên Web Dashboard", "_Toc3000020", "8", None),
+        ("Hình 4.1. Sơ đồ đấu nối mô hình thực nghiệm", "_Toc3000024", "9", None),
     ]
     for cap_txt, bm, pg, first_k in fig_list:
         new_body_tail.append(make_tof_entry(cap_txt, bm, pg, is_first_for_kind=first_k))
     new_body_tail.append(tof_end_para_1)
-    new_body_tail.append(children[64]) # page break / spacing before DANH MỤC BẢNG BIỂU
+    new_body_tail.append(page_brk_65)
 
-    # --- DANH MỤC BẢNG BIỂU ---
+    # --- DANH MỤC BẢNG BIỂU (5 concise titles) ---
     new_body_tail.append(title_bang)
     tbl_list = [
-        ("Bảng 2.1. So sánh cơ chế trao đổi gói tin của ba mức QoS", "_Toc3000010", "3", "Bảng"),
-        ("Bảng 3.1. Quy hoạch topic và định dạng gói tin JSON của hệ thống", "_Toc3000016", "6", None),
-        ("Bảng 4.1. Thông số kỹ thuật các thành phần trong mô hình thực nghiệm", "_Toc3000023", "9", None),
-        ("Bảng 4.2. Kết quả kiểm thử chức năng điều khiển và phản hồi trạng thái", "_Toc3000026", "10", None),
-        ("Bảng 4.3. Kết quả thống kê độ trễ khứ hồi (RTT) theo mức QoS (N = 30)", "_Toc3000028", "10", None),
+        ("Bảng 2.1. So sánh các mức QoS", "_Toc3000010", "4", "Bảng"),
+        ("Bảng 3.1. Topic và định dạng gói tin", "_Toc3000016", "6", None),
+        ("Bảng 4.1. Thành phần của mô hình thực nghiệm", "_Toc3000023", "9", None),
+        ("Bảng 4.2. Kiểm thử chức năng điều khiển và phản hồi trạng thái", "_Toc3000026", "10", None),
+        ("Bảng 4.3. Kết quả đo RTT theo mức QoS", "_Toc3000028", "10", None),
     ]
     for cap_txt, bm, pg, first_k in tbl_list:
         new_body_tail.append(make_tof_entry(cap_txt, bm, pg, is_first_for_kind=first_k))
     new_body_tail.append(tof_end_para_2)
-    new_body_tail.append(children[72])
-    new_body_tail.append(children[73])
+    new_body_tail.append(empty_73)
+    new_body_tail.append(page_brk_74)
 
-    # --- DANH MỤC TỪ VIẾT TẮT ---
+    # --- DANH MỤC TỪ VIẾT TẮT (original 8 items, 3 columns) ---
     new_body_tail.append(title_tvt)
     abbr_rows = [
-        ["1", "GPIO", "General-Purpose Input/Output (Chân vào/ra đa năng)"],
-        ["2", "IoT", "Internet of Things (Internet vạn vật)"],
-        ["3", "IP", "Internet Protocol (Giao thức liên mạng)"],
-        ["4", "JSON", "JavaScript Object Notation (Định dạng dữ liệu đối tượng JavaScript)"],
-        ["5", "LWT", "Last Will and Testament (Bản tin di chúc khi mất kết nối)"],
-        ["6", "MQTT", "Message Queuing Telemetry Transport (Giao thức truyền tải bản tin nhẹ)"],
-        ["7", "QoS", "Quality of Service (Chất lượng dịch vụ)"],
-        ["8", "RTT", "Round-Trip Time (Độ trễ truyền thông khứ hồi)"],
-        ["9", "SD", "Standard Deviation (Độ lệch chuẩn mẫu)"],
-        ["10", "TCP", "Transmission Control Protocol (Giao thức điều khiển truyền vận)"],
-        ["11", "TLS", "Transport Layer Security (Bảo mật tầng giao vận)"],
+        ["1", "IP", "Internet Protocol"],
+        ["2", "JSON", "JavaScript Object Notation"],
+        ["3", "LWT", "Last Will and Testament"],
+        ["4", "MQTT", "Message Queuing Telemetry Transport"],
+        ["5", "QoS", "Quality of Service"],
+        ["6", "RTT", "Round-Trip Time"],
+        ["7", "TCP", "Transmission Control Protocol"],
+        ["8", "TLS", "Transport Layer Security"],
     ]
-    new_body_tail.append(make_table([900, 1800, 6088], ["STT", "Từ viết tắt", "Chữ viết đầy đủ và giải thích"],
+    new_body_tail.append(make_table([1000, 2000, 5788], ["STT", "Từ viết tắt", "Chữ viết đầy đủ"],
                                     abbr_rows, col_aligns=['center', 'center', 'left'], keep_with_caption=False))
-    new_body_tail.append(children[76])
-    new_body_tail.append(children[77])
-    new_body_tail.append(sect_break_p78)
+    new_body_tail.append(empty_77)
+    new_body_tail.append(page_brk_78)
+    new_body_tail.append(sect_break_p79)
 
     # ==========================================================================
     # CHƯƠNG 1. TỔNG QUAN ĐỀ TÀI
     # ==========================================================================
     new_body_tail.append(make_heading("TỔNG QUAN ĐỀ TÀI", level=1, bm_id=101, bm_name="_Toc3000001", page_break=False))
     new_body_tail.append(make_heading("Đặt vấn đề", level=2, bm_id=102, bm_name="_Toc3000002"))
-
     new_body_tail.append(make_para([
-        "Trong các hệ thống điều khiển thiết bị qua mạng thuộc lĩnh vực Internet vạn vật (IoT), hai yêu cầu kỹ thuật cốt lõi là đảm bảo lệnh điều khiển đến đúng thiết bị chấp hành và đồng bộ chính xác trạng thái thực tế của thiết bị trên giao diện giám sát. Nếu chỉ sử dụng cơ chế truyền lệnh một chiều (vòng hở), giao diện người dùng có thể hiển thị thiết bị đã bật trong khi gói tin bị suy hao trên đường truyền hoặc vi điều khiển chưa thực thi lệnh. Do đó, hệ thống bắt buộc phải có cơ chế phản hồi trạng thái thực tế (vòng kín) từ thiết bị chấp hành về giao diện sau mỗi tác vụ đóng hoặc ngắt."
+        "Điều khiển thiết bị từ xa qua mạng cần hai điều kiện: lệnh đến được thiết bị và giao diện điều khiển hiển thị đúng trạng thái của thiết bị. Nếu chỉ gửi lệnh một chiều, giao diện có thể hiển thị thiết bị đang bật trong khi thiết bị chưa nhận được lệnh. Vì vậy, thiết bị cần gửi bản tin phản hồi trạng thái về giao diện sau mỗi lần đóng hoặc ngắt."
     ]))
     new_body_tail.append(make_para([
-        "Giao thức MQTT (Message Queuing Telemetry Transport) theo tiêu chuẩn OASIS v3.1.1 [1] hoạt động theo mô hình xuất bản – đăng ký (Publish/Subscribe) trên nền TCP/IP, cho phép duy trì kết nối hai chiều với kích thước gói tin nhỏ và hỗ trợ ba mức chất lượng dịch vụ (QoS 0, QoS 1, QoS 2). Do mỗi mức QoS quy định số lượng gói tin bắt tay xác nhận khác nhau trên từng chặng truyền thông, thời gian phản hồi của hệ thống sẽ thay đổi theo mức QoS được cấu hình. Từ thực tế đó, đề tài ĐT42 thực hiện xây dựng và khảo sát thực nghiệm “Hệ thống điều khiển thiết bị sử dụng MQTT” tập trung vào ba nội dung trọng tâm: gửi lệnh điều khiển qua MQTT, phản hồi đồng bộ trạng thái hai chiều và đánh giá định lượng độ trễ truyền thông khứ hồi (RTT)."
+        "MQTT là giao thức truyền bản tin theo mô hình Publish/Subscribe và có ba mức chất lượng dịch vụ (QoS). Mỗi mức QoS có số gói tin trao đổi khác nhau nên thời gian phản hồi của hệ thống cũng khác nhau. Đề tài ĐT42 khảo sát hệ thống điều khiển thiết bị sử dụng MQTT với ba nội dung: gửi lệnh, phản hồi trạng thái và đo độ trễ truyền thông."
     ]))
 
     new_body_tail.append(make_heading("Mục tiêu đề tài", level=2, bm_id=103, bm_name="_Toc3000003"))
-    new_body_tail.append(make_para(["Đề tài đặt ra ba mục tiêu cụ thể:"]))
+    new_body_tail.append(make_para(["Đề tài có ba mục tiêu:"]))
     new_body_tail.append(make_para([
-        "Thiết kế cơ chế gửi lệnh điều khiển (Bật/Tắt) từ giao diện Web Dashboard đến vi điều khiển ESP32 [2] thông qua trạm trung chuyển MQTT Broker (EMQX) [3]."
+        "Gửi lệnh Bật/Tắt từ giao diện Web đến thiết bị thông qua MQTT Broker."
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
     new_body_tail.append(make_para([
-        "Xây dựng cơ chế phản hồi trạng thái thực tế (vòng kín) từ thiết bị về giao diện điều khiển, đảm bảo đồng bộ hiển thị cả khi điều khiển từ xa qua Web, khi tác động bằng nút nhấn vật lý tại chỗ hoặc khi thiết bị mất kết nối đột ngột."
+        "Phản hồi trạng thái thực tế của thiết bị về giao diện, kể cả khi trạng thái thay đổi do nút nhấn tại chỗ."
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
     new_body_tail.append(make_para([
-        "Đo đạc thực nghiệm và phân tích thống kê độ trễ khứ hồi (RTT) ở ba mức QoS 0, QoS 1 và QoS 2 (với 30 mẫu đo cho mỗi mức QoS), từ đó lựa chọn mức QoS phù hợp cho bài toán điều khiển thiết bị."
+        "Đo độ trễ khứ hồi (RTT) ở các mức QoS 0, QoS 1 và QoS 2 để so sánh."
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
 
     new_body_tail.append(make_heading("Phạm vi và nội dung thực hiện", level=2, bm_id=104, bm_name="_Toc3000004"))
     new_body_tail.append(make_para([
-        "Hệ thống thực nghiệm gồm ba thành phần: giao diện điều khiển Web Dashboard sử dụng thư viện MQTT.js [5] kết nối với EMQX Broker [3] qua giao thức WebSocket (cổng 8083), và vi điều khiển ESP32-WROOM-32 [2] sử dụng thư viện arduino-mqtt [4] kết nối với Broker qua giao thức TCP/IP trên mạng Wi-Fi 2,4 GHz (cổng 1883) để đóng/ngắt một module relay điều khiển tải, kết hợp một nút nhấn vật lý tại chỗ. Toàn bộ hệ thống tuân thủ đặc tả giao thức MQTT phiên bản 3.1.1 [1]."
+        "Hệ thống gồm giao diện Web Dashboard, MQTT Broker EMQX và vi điều khiển ESP32 điều khiển một relay để đóng ngắt một thiết bị tải. ESP32 kết nối Broker qua Wi-Fi bằng giao thức TCP, Web Dashboard kết nối Broker qua WebSocket. Hệ thống sử dụng MQTT phiên bản 3.1.1."
     ]))
     new_body_tail.append(make_para([
-        "Nội dung báo cáo được tổ chức thành 5 chương: Chương 1 trình bày tổng quan đề tài; Chương 2 phân tích cơ sở lý thuyết về giao thức MQTT, cơ chế bắt tay QoS và phương pháp xác định độ trễ khứ hồi; Chương 3 trình bày thiết kế kiến trúc hệ thống, cấu trúc topic/gói tin JSON và lưu đồ thuật toán; Chương 4 trình bày kết quả kiểm thử chức năng và đánh giá thống kê độ trễ RTT thực nghiệm; Chương 5 tổng kết các kết quả đạt được và đề xuất hướng phát triển."
+        "Nội dung báo cáo gồm cơ sở lý thuyết về MQTT và độ trễ, thiết kế cấu trúc topic và quy trình xử lý, kiểm thử chức năng và đo RTT ở ba mức QoS. Báo cáo không xét bảo mật đường truyền và hệ thống có nhiều thiết bị."
     ]))
 
     # ==========================================================================
@@ -569,320 +632,281 @@ def build_docx():
     # ==========================================================================
     new_body_tail.append(make_heading("CƠ SỞ LÝ THUYẾT", level=1, bm_id=105, bm_name="_Toc3000005", page_break=True))
     new_body_tail.append(make_heading("Giao thức MQTT và mô hình Publish/Subscribe", level=2, bm_id=106, bm_name="_Toc3000006"))
-
     new_body_tail.append(make_para([
-        "MQTT là giao thức truyền thông hướng bản tin hoạt động ở tầng ứng dụng trên nền giao thức TCP/IP, được chuẩn hóa bởi tổ chức OASIS [1]. Thay vì kết nối trực tiếp điểm – điểm như mô hình Client/Server truyền thống, MQTT tách biệt bên gửi và bên nhận thông qua mô hình xuất bản – đăng ký (Publish/Subscribe) gồm ba thành phần như thể hiện trên Hình 2.1:"
+        "MQTT là giao thức truyền bản tin hoạt động trên nền TCP/IP theo mô hình xuất bản – đăng ký (Publish/Subscribe). Mô hình gồm ba thành phần, như Hình 2.1:"
     ]))
     new_body_tail.append(make_para([
-        ("Publisher (Bên phát): ", {'bold': True}),
-        ("thiết bị hoặc ứng dụng đóng gói dữ liệu và phát bản tin (PUBLISH) lên một chủ đề (topic) xác định.", {})
+        ("Publisher: ", {'bold': True}), ("bên phát bản tin lên một topic.", {})
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
     new_body_tail.append(make_para([
-        ("Subscriber (Bên nhận): ", {'bold': True}),
-        ("thiết bị hoặc ứng dụng gửi yêu cầu đăng ký trước (SUBSCRIBE) một hoặc nhiều topic để nhận dữ liệu liên quan.", {})
+        ("Subscriber: ", {'bold': True}), ("bên đăng ký nhận bản tin của một topic.", {})
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
     new_body_tail.append(make_para([
-        ("Broker (Trạm trung chuyển): ", {'bold': True}),
-        ("máy chủ trung tâm quản lý kết nối của các client, tiếp nhận bản tin từ Publisher, lọc theo bảng đăng ký topic và chuyển tiếp bản tin (PUBLISH) đến đúng các Subscriber tương ứng [1], [3].", {})
+        ("Broker: ", {'bold': True}), ("nhận bản tin từ Publisher và chuyển đến các Subscriber đã đăng ký topic đó.", {})
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
 
     new_body_tail.append(make_image_para('rId500', 201, 'hinh_2_1_pubsub.png',
-                                         'Mô hình truyền thông Publish/Subscribe trong MQTT',
-                                         os.path.join(fig_dir, 'hinh_2_1_pubsub.png')))
-    new_body_tail.append(make_caption('Hình', 2, 1, 'Mô hình truyền thông Publish/Subscribe trong MQTT', bm_id=107, bm_name='_Toc3000007'))
+                                         'Mô hình Publish/Subscribe',
+                                         os.path.join(media_dir, 'hinh_2_1_pubsub.png'), target_cx=5486400))
+    new_body_tail.append(make_caption('Hình', 2, 1, 'Mô hình Publish/Subscribe', bm_id=107, bm_name='_Toc3000007'))
 
     new_body_tail.append(make_para([
-        "Nhờ duy trì phiên kết nối TCP liên tục và đẩy dữ liệu theo sự kiện (event-driven push), giao diện điều khiển và thiết bị chấp hành không cần gửi yêu cầu hỏi vòng (polling) định kỳ, giúp giảm tải băng thông và giảm độ trễ phản hồi. Để đảm bảo tính nhất quán trạng thái trong điều khiển thiết bị, MQTT cung cấp hai cơ chế quan trọng [1]:"
+        "Publisher và Subscriber không kết nối trực tiếp với nhau mà cùng kết nối với Broker. Broker chuyển bản tin đến Subscriber khi nhận được bản tin, thiết bị không phải gửi yêu cầu hỏi định kỳ."
     ]))
     new_body_tail.append(make_para([
-        ("Bản tin lưu giữ (Retained Message): ", {'bold': True}),
-        ("khi Publisher phát bản tin có cờ Retain = true, Broker lưu lại bản tin hợp lệ cuối cùng của topic đó và lập tức gửi bản tin này cho bất kỳ Subscriber nào mới đăng ký vào topic, giúp giao diện nhận ngay trạng thái hiện hành của thiết bị khi vừa mở hoặc tải lại trang.", {})
+        "MQTT có hai tính năng hỗ trợ đồng bộ trạng thái mà hệ thống sử dụng:"
+    ]))
+    new_body_tail.append(make_para([
+        ("Retain: ", {'bold': True}),
+        ("Broker lưu bản tin cuối cùng của một topic và gửi bản tin này cho Subscriber mới đăng ký topic đó. Giao diện nhận được trạng thái gần nhất khi mở trang.", {})
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
     new_body_tail.append(make_para([
-        ("Bản tin di chúc (Last Will and Testament – LWT): ", {'bold': True}),
-        ("khi khởi tạo kết nối (CONNECT), client khai báo trước với Broker một bản tin LWT. Nếu client mất nguồn hoặc đứt kết nối mạng đột ngột mà không gửi gói DISCONNECT hợp lệ sau khoảng thời gian Keep-Alive, Broker tự động phát bản tin LWT lên topic đã định để thông báo thiết bị ngoại tuyến.", {})
+        ("Last Will and Testament (LWT): ", {'bold': True}),
+        ("thiết bị đăng ký trước với Broker một bản tin. Khi thiết bị mất kết nối đột ngột, Broker phát bản tin này để báo thiết bị đã ngắt kết nối.", {})
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
 
     new_body_tail.append(make_heading("Các mức chất lượng dịch vụ (QoS)", level=2, bm_id=108, bm_name="_Toc3000008"))
     new_body_tail.append(make_para([
-        "Đặc tả MQTT v3.1.1 [1] định nghĩa ba mức chất lượng dịch vụ (Quality of Service – QoS) nhằm quy định quy trình xác nhận gói tin trên từng chặng giữa bên gửi và bên nhận, như minh họa tại Hình 2.2:"
+        "MQTT có ba mức QoS. Mức QoS quy định cách trao đổi gói tin giữa bên gửi và bên nhận, như Hình 2.2:"
     ]))
     new_body_tail.append(make_para([
-        ("QoS 0 (At most once – Tối đa một lần): ", {'bold': True}),
-        ("bên gửi phát duy nhất một gói PUBLISH (QoS = 0) và không chờ phản hồi xác nhận từ bên nhận. Độ bảo toàn phụ thuộc hoàn toàn vào tầng TCP bên dưới; bản tin có thể bị mất nếu kết nối gián đoạn.", {})
+        ("QoS 0 (At most once): ", {'bold': True}),
+        ("bên gửi gửi gói PUBLISH một lần và không chờ xác nhận. Gói tin có thể bị mất nếu đường truyền gián đoạn.", {})
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
     new_body_tail.append(make_para([
-        ("QoS 1 (At least once – Ít nhất một lần): ", {'bold': True}),
-        ("sử dụng cơ chế bắt tay hai bước. Bên gửi phát gói PUBLISH kèm mã định danh gói tin (PacketId) và lưu tạm bản tin cho đến khi nhận được gói xác nhận PUBACK (cùng PacketId) từ bên nhận. Nếu quá thời gian chờ mà chưa nhận được PUBACK, bên gửi phát lại gói PUBLISH với cờ DUP = 1, do đó bên nhận có thể nhận bản tin nhiều hơn một lần.", {})
+        ("QoS 1 (At least once): ", {'bold': True}),
+        ("bên nhận trả gói PUBACK. Nếu bên gửi không nhận được PUBACK trong một khoảng thời gian thì gửi lại gói PUBLISH, nên bản tin có thể được nhận nhiều hơn một lần.", {})
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
     new_body_tail.append(make_para([
-        ("QoS 2 (Exactly once – Đúng một lần): ", {'bold': True}),
-        ("sử dụng quy trình bắt tay bốn bước gồm PUBLISH, PUBREC (Publish Received), PUBREL (Publish Release) và PUBCOMP (Publish Complete) gắn với PacketId nhằm loại bỏ hoàn toàn việc mất hoặc trùng lặp bản tin, đổi lại thời gian trễ và chi phí gói tin điều khiển tăng lên đáng kể.", {})
+        ("QoS 2 (Exactly once): ", {'bold': True}),
+        ("trao đổi bốn gói PUBLISH, PUBREC, PUBREL và PUBCOMP để bản tin được nhận đúng một lần.", {})
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
 
     new_body_tail.append(make_image_para('rId501', 202, 'hinh_2_2_qos.png',
-                                         'Trình tự trao đổi gói tin điều khiển của ba mức QoS',
-                                         os.path.join(fig_dir, 'hinh_2_2_qos.png')))
-    new_body_tail.append(make_caption('Hình', 2, 2, 'Trình tự trao đổi gói tin điều khiển của ba mức QoS', bm_id=109, bm_name='_Toc3000009'))
+                                         'Trình tự gói tin của các mức QoS',
+                                         os.path.join(media_dir, 'hinh_2_2_qos.png'), target_cx=5486400))
+    new_body_tail.append(make_caption('Hình', 2, 2, 'Trình tự gói tin của các mức QoS', bm_id=109, bm_name='_Toc3000009'))
 
     new_body_tail.append(make_para([
-        "Trong kiến trúc qua Broker, cơ chế QoS được thực thi độc lập trên hai chặng: chặng 1 từ Publisher đến Broker và chặng 2 từ Broker đến Subscriber. Theo chuẩn OASIS [1], mức QoS hiệu dụng ở chặng 2 bằng giá trị nhỏ hơn giữa mức QoS của bản tin gốc do Publisher phát và mức QoS tối đa mà Subscriber đã đăng ký. Bảng 2.1 tổng hợp đặc성 kỹ thuật của ba mức QoS."
+        "Số gói tin trao đổi tăng từ QoS 0 đến QoS 2, như Bảng 2.1. Mức QoS được áp dụng riêng cho chặng từ Publisher đến Broker và chặng từ Broker đến Subscriber. Ở chặng thứ hai, Broker dùng mức thấp hơn giữa mức Publisher gửi và mức Subscriber đăng ký."
     ]))
 
     qos_rows = [
-        ["QoS 0", "PUBLISH", "1", "2", "Tối đa một lần (At most once)"],
-        ["QoS 1", "PUBLISH, PUBACK", "2", "4", "Ít nhất một lần (At least once)"],
-        ["QoS 2", "PUBLISH, PUBREC, PUBREL, PUBCOMP", "4", "8", "Đúng một lần (Exactly once)"],
+        ["QoS 0", "PUBLISH", "1", "Tối đa một lần"],
+        ["QoS 1", "PUBLISH, PUBACK", "2", "Ít nhất một lần"],
+        ["QoS 2", "PUBLISH, PUBREC, PUBREL, PUBCOMP", "4", "Đúng một lần"],
     ]
-    new_body_tail.append(make_table([1100, 3100, 1350, 1350, 1888],
-                                    ["Mức QoS", "Các gói tin trao đổi trên mỗi chặng", "Số gói / 1 chặng", "Tổng gói / 2 chặng", "Độ tin cậy chuyển giao"],
-                                    qos_rows, col_aligns=['center', 'center', 'center', 'center', 'center']))
-    new_body_tail.append(make_caption('Bảng', 2, 1, 'So sánh cơ chế trao đổi gói tin của ba mức QoS', bm_id=110, bm_name='_Toc3000010'))
+    new_body_tail.append(make_table([1500, 3400, 1700, 2188],
+                                    ["Mức QoS", "Gói tin trao đổi", "Số gói tin", "Số lần nhận bản tin"],
+                                    qos_rows, col_aligns=['center', 'center', 'center', 'center']))
+    new_body_tail.append(make_caption('Bảng', 2, 1, 'So sánh các mức QoS', bm_id=110, bm_name='_Toc3000010'))
 
-    new_body_tail.append(make_heading("Độ trễ truyền thông khứ hồi (RTT)", level=2, bm_id=111, bm_name="_Toc3000011"))
+    new_body_tail.append(make_heading("Độ trễ truyền thông", level=2, bm_id=111, bm_name="_Toc3000011"))
     new_body_tail.append(make_para([
-        "Độ trễ truyền thông khứ hồi (Round-Trip Time – RTT) của một chu trình điều khiển vòng kín được định nghĩa là khoảng thời gian tính từ thời điểm giao diện điều khiển phát gói tin lệnh cho đến thời điểm giao diện nhận được gói tin phản hồi trạng thái thực tế từ thiết bị chấp hành. Giá trị RTT bao gồm bốn thành phần:"
+        "Độ trễ khứ hồi (Round-Trip Time, RTT) là thời gian từ lúc giao diện phát lệnh đến lúc nhận được bản tin phản hồi trạng thái từ thiết bị. RTT gồm các thành phần sau:"
     ]))
     new_body_tail.append(make_para([
-        "Thời gian truyền bản tin lệnh từ Web Dashboard qua Broker đến vi điều khiển ESP32 (gồm chặng WebSocket và chặng TCP/Wi-Fi);"
+        "thời gian truyền bản tin lệnh từ giao diện đến Broker và từ Broker đến thiết bị;"
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
     new_body_tail.append(make_para([
-        "Thời gian vi điều khiển ESP32 giải mã gói tin JSON, xuất tín hiệu điều khiển ra chân GPIO để đóng/ngắt relay và đọc lại trạng thái thực tế của chân điều khiển;"
+        "thời gian ESP32 xử lý lệnh và đóng hoặc ngắt relay;"
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
     new_body_tail.append(make_para([
-        "Thời gian truyền bản tin phản hồi trạng thái từ ESP32 qua Broker trở về Web Dashboard;"
+        "thời gian truyền bản tin phản hồi từ thiết bị đến Broker và từ Broker đến giao diện;"
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
     new_body_tail.append(make_para([
-        "Thời gian xử lý và trao đổi các gói tin xác nhận (PUBACK hoặc PUBREC/PUBREL/PUBCOMP) theo mức QoS được thiết lập."
+        "thời gian trao đổi gói tin xác nhận theo mức QoS."
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
 
-    new_body_tail.append(make_para(["Với mỗi lần đo thứ i, độ trễ khứ hồi được xác định theo công thức:"]))
-    # Công thức (2.1)
+    new_body_tail.append(make_para(["RTT được tính theo công thức:"]))
     new_body_tail.append(make_para([
         ('__TAB__', {}),
-        ('RTT', {'italic': True}), ('i', {'italic': True, 'vert': 'subscript'}),
-        (' = ', {}),
-        ('t', {'italic': True}), ('ack,i', {'italic': True, 'vert': 'subscript'}),
-        (' − ', {}),
-        ('t', {'italic': True}), ('send,i', {'italic': True, 'vert': 'subscript'}),
+        ('RTT = t', {}), ('ack', {'vert': 'subscript'}),
+        (' − t', {}), ('send', {'vert': 'subscript'}),
         ('__TAB__', {}),
         ('(2.1)', {})
-    ], first_line='0', jc='left', keep_lines=True, tabs=[('center', 4394, None), ('right', 8788, None)], space_before=60, space_after=60))
+    ], first_line='0', jc='left', keep_lines=True, tabs=[('center', 4394, None), ('right', 8788, None)]))
 
     new_body_tail.append(make_para([
-        ("trong đó ", {}),
-        ("t", {'italic': True}), ("send,i", {'italic': True, 'vert': 'subscript'}),
-        (" là nhãn thời gian (ms) lúc giao diện phát lệnh thứ ", {}),
-        ("i", {'italic': True}),
-        (" (được đính kèm vào gói tin lệnh và được ESP32 hoàn trả nguyên vẹn trong gói tin phản hồi), và ", {}),
-        ("t", {'italic': True}), ("ack,i", {'italic': True, 'vert': 'subscript'}),
-        (" là thời điểm (ms) giao diện nhận được bản tin phản hồi tương ứng. Do cả ", {}),
-        ("t", {'italic': True}), ("send,i", {'italic': True, 'vert': 'subscript'}),
-        (" và ", {}),
-        ("t", {'italic': True}), ("ack,i", {'italic': True, 'vert': 'subscript'}),
-        (" đều được lấy từ bộ đếm thời gian độ phân giải cao trên cùng một máy tính chạy Web Dashboard, phép đo hoàn toàn loại bỏ được sai số lệch đồng hồ (clock skew) giữa máy tính và vi điều khiển ESP32. Trên tập mẫu gồm ", {}),
-        ("N", {'italic': True}),
-        (" lần đo độc lập, giá trị độ trễ trung bình (", {}),
-        ("RTT", {'italic': True}), ("tb", {'vert': 'subscript'}),
-        (") và độ lệch chuẩn mẫu (", {}),
-        ("s", {'italic': True}),
-        (") dùng để đánh giá độ ổn định đường truyền được tính theo công thức:", {})
+        ("trong đó t", {}), ("send", {'vert': 'subscript'}),
+        (" là thời điểm giao diện phát lệnh và t", {}), ("ack", {'vert': 'subscript'}),
+        (" là thời điểm giao diện nhận bản tin phản hồi, tính bằng mili giây (ms). Hai thời điểm này đều đọc từ đồng hồ của máy chạy giao diện nên không cần đồng bộ đồng hồ với ESP32.", {})
     ]))
-
-    # Công thức (2.2)
-    new_body_tail.append(make_para([
-        ('__TAB__', {}),
-        ('RTT', {'italic': True}), ('tb', {'vert': 'subscript'}),
-        (' = (1 / ', {}), ('N', {'italic': True}), (') ∑ RTT', {'italic': True}), ('i', {'italic': True, 'vert': 'subscript'}),
-        (' ,    ', {}),
-        ('s', {'italic': True}), (' = √[ (1 / (', {}), ('N', {'italic': True}), (' − 1)) ∑ (RTT', {'italic': True}), ('i', {'italic': True, 'vert': 'subscript'}),
-        (' − RTT', {'italic': True}), ('tb', {'vert': 'subscript'}), (')', {}), ('2', {'vert': 'superscript'}), (' ]', {}),
-        ('__TAB__', {}),
-        ('(2.2)', {})
-    ], first_line='0', jc='left', keep_lines=True, tabs=[('center', 4394, None), ('right', 8788, None)], space_before=60, space_after=60))
 
     # ==========================================================================
     # CHƯƠNG 3. THIẾT KẾ HỆ THỐNG
     # ==========================================================================
     new_body_tail.append(make_heading("THIẾT KẾ HỆ THỐNG", level=1, bm_id=112, bm_name="_Toc3000012", page_break=True))
     new_body_tail.append(make_heading("Sơ đồ khối và nguyên lý hoạt động", level=2, bm_id=113, bm_name="_Toc3000013"))
-
-    new_body_tail.append(make_para([
-        "Hệ thống điều khiển và đánh giá độ trễ được thiết kế gồm ba khối chức năng liên kết qua ba topic tách biệt như thể hiện trên Hình 3.1:"
-    ]))
+    new_body_tail.append(make_para(["Hệ thống gồm ba khối, như Hình 3.1:"]))
 
     new_body_tail.append(make_image_para('rId502', 301, 'hinh_3_1_so_do_khoi.png',
-                                         'Sơ đồ khối kiến trúc hệ thống điều khiển và giám sát',
-                                         os.path.join(fig_dir, 'hinh_3_1_so_do_khoi.png')))
-    new_body_tail.append(make_caption('Hình', 3, 1, 'Sơ đồ khối kiến trúc hệ thống điều khiển và giám sát', bm_id=114, bm_name='_Toc3000014'))
+                                         'Sơ đồ khối hệ thống',
+                                         os.path.join(media_dir, 'hinh_3_1_so_do_khoi.png'), target_cx=5486400))
+    new_body_tail.append(make_caption('Hình', 3, 1, 'Sơ đồ khối hệ thống', bm_id=114, bm_name='_Toc3000014'))
 
     new_body_tail.append(make_para([
-        ("Khối giao diện điều khiển (Web Dashboard): ", {'bold': True}),
-        ("chạy trên trình duyệt, sử dụng thư viện MQTT.js [5] kết nối với Broker qua giao thức WebSocket (cổng 8083). Khối này cung cấp nút lệnh Bật/Tắt, bộ chọn mức QoS (0, 1, 2), hiển thị trạng thái kết nối thiết bị theo thời gian thực và tự động tính toán, thống kê độ trễ RTT.", {})
+        ("Web Dashboard: ", {'bold': True}),
+        ("có nút Bật/Tắt để gửi lệnh, nhận bản tin phản hồi để cập nhật trạng thái hiển thị và tính RTT.", {})
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
     new_body_tail.append(make_para([
-        ("Khối trung tâm chuyển tiếp (MQTT Broker – EMQX): ", {'bold': True}),
-        ("tiếp nhận đồng thời kết nối WebSocket từ Web Dashboard và kết nối TCP thuần (cổng 1883) từ ESP32 [3], định tuyến bản tin theo cấu trúc topic, thực thi bắt tay QoS, lưu giữ bản tin Retain và giám sát Keep-Alive để phát bản tin LWT khi ESP32 mất kết nối.", {})
+        ("MQTT Broker (EMQX): ", {'bold': True}),
+        ("nhận kết nối từ Web Dashboard qua WebSocket và từ ESP32 qua TCP, chuyển bản tin giữa các topic theo mức QoS.", {})
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
     new_body_tail.append(make_para([
-        ("Khối chấp hành (ESP32 và Module Relay): ", {'bold': True}),
-        ("vi điều khiển ESP32-WROOM-32 [2] nhận lệnh từ Broker, kích đóng hoặc ngắt module relay tại chân GPIO26, đồng thời quét nút nhấn vật lý tại chân GPIO27, đọc lại trạng thái thực tế của chân GPIO26 và phát bản tin phản hồi trạng thái.", {})
+        ("ESP32 và Relay: ", {'bold': True}),
+        ("nhận lệnh để đóng hoặc ngắt relay, đọc nút nhấn tại chỗ và gửi bản tin trạng thái thực tế.", {})
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
 
     new_body_tail.append(make_para([
-        "Nguyên lý hoạt động vòng kín: khi người dùng nhấn nút Bật hoặc Tắt, Web Dashboard phát bản tin lệnh lên topic dt42/cmd nhưng chưa thay đổi trạng thái hiển thị của thiết bị trên giao diện. Chỉ sau khi ESP32 kích đóng/ngắt relay, đọc lại mức logic thực tế tại chân điều khiển và gửi bản tin xác nhận về topic dt42/state, Web Dashboard mới cập nhật giao diện theo bản tin này."
+        "Nguyên lý hoạt động: giao diện gửi lệnh lên topic dt42/cmd, ESP32 nhận lệnh và đóng hoặc ngắt relay. Sau đó ESP32 gửi trạng thái thực tế lên topic dt42/state. Giao diện chỉ thay đổi trạng thái hiển thị khi nhận bản tin này."
     ]))
 
-    new_body_tail.append(make_heading("Thiết kế cấu trúc topic và định dạng gói tin", level=2, bm_id=115, bm_name="_Toc3000015"))
+    new_body_tail.append(make_heading("Thiết kế topic và gói tin", level=2, bm_id=115, bm_name="_Toc3000015"))
     new_body_tail.append(make_para([
-        "Để tránh hiện tượng tự nhận lại bản tin của chính mình (loopback) và tách bạch luồng điều khiển với luồng phản hồi, hệ thống quy hoạch ba topic độc lập sử dụng định dạng dữ liệu JSON như trình bày tại Bảng 3.1."
+        "Lệnh và phản hồi dùng hai topic riêng. Thêm một topic báo trạng thái kết nối của ESP32. Gói tin có định dạng JSON, như Bảng 3.1."
     ]))
 
     topic_rows = [
-        ["dt42/cmd", "Web → Broker → ESP32", '{"action":"ON", "cmd_id":1, "t_send":1729301000120, "qos":1}', "Không",
-         "Truyền lệnh đóng (ON) hoặc ngắt (OFF), kèm mã phiên lệnh cmd_id và nhãn thời gian phát t_send (ms)."],
-        ["dt42/state", "ESP32 → Broker → Web", '{"state":"ON", "cmd_id":1, "t_send":1729301000120, "qos":1}', "Có",
-         "Phản hồi trạng thái thực tế của relay (ON/OFF), hoàn trả mã cmd_id và nhãn thời gian t_send."],
-        ["dt42/status", "ESP32, Broker → Web", '{"online":true} hoặc {"online":false}', "Có",
-         "Thông báo trạng thái kết nối của ESP32. Broker tự động phát bản tin false theo cơ chế LWT khi mất kết nối."],
+        ["dt42/cmd", "Web → Broker → ESP32", '{"action": "ON", "t_send": 1729301000120}',
+         [("Lệnh Bật (ON) hoặc Tắt (OFF), kèm thời điểm phát lệnh t", {}), ("send", {'vert': 'subscript'}), (" (ms).", {})]],
+        ["dt42/state", "ESP32 → Broker → Web", '{"state": "ON", "t_send": 1729301000120}',
+         [("Trạng thái thực tế sau khi đóng hoặc ngắt relay, trả lại giá trị t", {}), ("send", {'vert': 'subscript'}), (".", {})]],
+        ["dt42/status", "ESP32, Broker → Web", '{"online": true} hoặc {"online": false}',
+         "Trạng thái kết nối của ESP32. Broker phát bản tin false theo LWT."],
     ]
-    new_body_tail.append(make_table([1150, 1750, 2750, 800, 2338],
-                                    ["Topic", "Chiều truyền", "Định dạng gói tin JSON", "Retain", "Chức năng"],
-                                    topic_rows, col_aligns=['center', 'center', 'left', 'center', 'left']))
-    new_body_tail.append(make_caption('Bảng', 3, 1, 'Quy hoạch topic và định dạng gói tin JSON của hệ thống', bm_id=116, bm_name='_Toc3000016'))
+    new_body_tail.append(make_table([1350, 2000, 2650, 2788],
+                                    ["Topic", "Chiều truyền", "Gói tin JSON", "Chức năng"],
+                                    topic_rows, col_aligns=['center', 'center', 'left', 'left']))
+    new_body_tail.append(make_caption('Bảng', 3, 1, 'Topic và định dạng gói tin', bm_id=116, bm_name='_Toc3000016'))
 
     new_body_tail.append(make_para([
-        "Cả hai topic dt42/state và dt42/status đều được thiết lập cờ Retain = true để giao diện luôn đồng bộ được trạng thái mới nhất ngay khi kết nối vào Broker. Điểm cải tiến quan trọng trong thiết kế gói tin là việc bổ sung trường định danh phiên lệnh cmd_id cùng với nhãn thời gian t_send: khi người dùng tải lại trang Web, Broker sẽ đẩy lại bản tin dt42/state được lưu giữ (Retain) từ phiên trước (có chứa t_send > 0 của quá khứ). Nhờ kiểm tra điều kiện khớp mã lệnh đang chờ (cmd_id == pending_cmd_id), giao diện chỉ đồng bộ trạng thái hiển thị mà không tính RTT sai lệch từ gói tin Retain cũ. Tương tự, khi người dùng tác động bằng nút nhấn vật lý tại mạch, ESP32 phát bản tin lên dt42/state với cmd_id = 0 và t_send = 0; giao diện cập nhật ngay trạng thái mới và bỏ qua bước tính RTT."
+        ("Bản tin trên topic dt42/state và dt42/status được gửi với cờ Retain. Khi nút nhấn tại chỗ làm thay đổi trạng thái, ESP32 gửi bản tin trên topic dt42/state với t", {}),
+        ("send", {'vert': 'subscript'}),
+        (" bằng 0.", {})
     ]))
 
     new_body_tail.append(make_heading("Quy trình xử lý và lưu đồ thuật toán", level=2, bm_id=117, bm_name="_Toc3000017"))
-    new_body_tail.append(make_para([
-        "Chu trình xử lý một lệnh điều khiển từ xa và đo độ trễ RTT diễn ra qua bốn bước chính (với hai chặng truyền thông qua Broker ở Bước 1 và Bước 3) như minh họa trên Hình 3.2:"
-    ]))
+    new_body_tail.append(make_para(["Một lệnh điều khiển được xử lý qua bốn bước, như Hình 3.2:"]))
 
     new_body_tail.append(make_image_para('rId503', 302, 'hinh_3_2_trinh_tu.png',
-                                         'Trình tự xử lý một lệnh điều khiển và đo độ trễ RTT',
-                                         os.path.join(fig_dir, 'hinh_3_2_trinh_tu.png')))
-    new_body_tail.append(make_caption('Hình', 3, 2, 'Trình tự xử lý một lệnh điều khiển và đo độ trễ RTT', bm_id=118, bm_name='_Toc3000018'))
+                                         'Trình tự xử lý một lệnh điều khiển',
+                                         os.path.join(media_dir, 'hinh_3_2_trinh_tu.png'), target_cx=4900000, max_cy=3500000))
+    new_body_tail.append(make_caption('Hình', 3, 2, 'Trình tự xử lý một lệnh điều khiển', bm_id=118, bm_name='_Toc3000018'))
 
     new_body_tail.append(make_para([
-        ("Bước 1 (Phát lệnh điều khiển – Bước 1a & 1b): ", {'bold': True}),
-        ("khi người dùng nhấn nút Bật hoặc Tắt trên Web Dashboard, chương trình tăng bộ đếm cmd_id, lưu mã lệnh đang chờ (pending_cmd_id = cmd_id), ghi nhận thời điểm phát ", {}),
-        ("t", {'italic': True}), ("send", {'italic': True, 'vert': 'subscript'}),
-        (" và phát gói JSON lên topic dt42/cmd (Bước 1a). EMQX Broker tiếp nhận và chuyển tiếp gói tin đến ESP32 theo mức QoS đã chọn (Bước 1b).", {})
+        ("Bước 1. ", {'bold': True}),
+        ("Người dùng nhấn nút trên Web Dashboard. Giao diện ghi thời điểm t", {}),
+        ("send", {'vert': 'subscript'}),
+        (", đóng gói lệnh dạng JSON và gửi lên topic dt42/cmd. Ở bước này giao diện chưa đổi trạng thái hiển thị.", {})
     ]))
     new_body_tail.append(make_para([
-        ("Bước 2 (Thực thi tại vi điều khiển ESP32): ", {'bold': True}),
-        ("ESP32 nhận bản tin từ dt42/cmd, phân tích cú pháp JSON để lấy trường action, cmd_id, ", {}),
-        ("t", {'italic': True}), ("send", {'italic': True, 'vert': 'subscript'}),
-        (", sau đó xuất mức logic ra chân GPIO26 để đóng hoặc ngắt relay và đọc lại trạng thái thực tế của chân GPIO26 bằng hàm digitalRead(GPIO26).", {})
+        ("Bước 2. ", {'bold': True}),
+        ("ESP32 nhận bản tin từ topic dt42/cmd, lấy giá trị action và đóng hoặc ngắt relay.", {})
     ]))
     new_body_tail.append(make_para([
-        ("Bước 3 (Phản hồi trạng thái thực tế – Bước 3a & 3b): ", {'bold': True}),
-        ("ESP32 đóng gói trạng thái thực tế (ON hoặc OFF) kèm nguyên vẹn giá trị cmd_id và ", {}),
-        ("t", {'italic': True}), ("send", {'italic': True, 'vert': 'subscript'}),
-        (" vừa nhận, phát lên topic dt42/state với cờ Retain = true (Bước 3a) để Broker chuyển tiếp về Web Dashboard (Bước 3b).", {})
+        ("Bước 3. ", {'bold': True}),
+        ("ESP32 đọc trạng thái thực tế của relay, đóng gói cùng giá trị t", {}),
+        ("send", {'vert': 'subscript'}),
+        (" đã nhận và gửi lên topic dt42/state.", {})
     ]))
     new_body_tail.append(make_para([
-        ("Bước 4 (Cập nhật hiển thị và tính RTT): ", {'bold': True}),
-        ("Web Dashboard nhận bản tin phản hồi tại thời điểm ", {}),
-        ("t", {'italic': True}), ("ack", {'italic': True, 'vert': 'subscript'}),
-        (", cập nhật trạng thái hiển thị ON/OFF. Nếu gói tin có ", {}),
-        ("t", {'italic': True}), ("send", {'italic': True, 'vert': 'subscript'}),
-        (" > 0 và cmd_id trùng khớp với pending_cmd_id, chương trình tính độ trễ khứ hồi theo công thức (2.1), cập nhật bảng thống kê và xóa cờ pending_cmd_id.", {})
+        ("Bước 4. ", {'bold': True}),
+        ("Web Dashboard nhận bản tin tại thời điểm t", {}),
+        ("ack", {'vert': 'subscript'}),
+        (", cập nhật trạng thái hiển thị và tính RTT theo công thức (2.1).", {})
     ]))
-
     new_body_tail.append(make_para([
-        "Thuật toán chi tiết của chương trình nhúng trên vi điều khiển ESP32 và chương trình xử lý sự kiện trên Web Dashboard được thể hiện tương ứng tại lưu đồ Hình 3.3 và Hình 3.4."
+        ("Khi nút nhấn tại chỗ được nhấn, ESP32 đảo trạng thái relay và thực hiện Bước 3 với t", {}),
+        ("send", {'vert': 'subscript'}),
+        (" bằng 0. Giao diện cập nhật trạng thái và không tính RTT.", {})
+    ]))
+    new_body_tail.append(make_para([
+        "Hình 3.3 là lưu đồ chương trình trên ESP32 và Hình 3.4 là lưu đồ xử lý trên Web Dashboard."
     ]))
 
     new_body_tail.append(make_image_para('rId504', 303, 'hinh_3_3_luu_do_esp32.png',
-                                         'Lưu đồ thuật toán chương trình trên vi điều khiển ESP32',
-                                         os.path.join(fig_dir, 'hinh_3_3_luu_do_esp32.png'), max_height_emu=4200000))
-    new_body_tail.append(make_caption('Hình', 3, 3, 'Lưu đồ thuật toán chương trình trên vi điều khiển ESP32', bm_id=119, bm_name='_Toc3000019'))
+                                         'Lưu đồ chương trình trên ESP32',
+                                         os.path.join(media_dir, 'hinh_3_3_luu_do_esp32.png'), target_cx=4300000, max_cy=4300000))
+    new_body_tail.append(make_caption('Hình', 3, 3, 'Lưu đồ chương trình trên ESP32', bm_id=119, bm_name='_Toc3000019'))
 
     new_body_tail.append(make_image_para('rId505', 304, 'hinh_3_4_luu_do_web.png',
-                                         'Lưu đồ thuật toán xử lý trên giao diện Web Dashboard',
-                                         os.path.join(fig_dir, 'hinh_3_4_luu_do_web.png'), max_height_emu=4200000))
-    new_body_tail.append(make_caption('Hình', 3, 4, 'Lưu đồ thuật toán xử lý trên giao diện Web Dashboard', bm_id=120, bm_name='_Toc3000020'))
+                                         'Lưu đồ xử lý trên Web Dashboard',
+                                         os.path.join(media_dir, 'hinh_3_4_luu_do_web.png'), target_cx=4150000, max_cy=4420000))
+    new_body_tail.append(make_caption('Hình', 3, 4, 'Lưu đồ xử lý trên Web Dashboard', bm_id=120, bm_name='_Toc3000020'))
 
     # ==========================================================================
     # CHƯƠNG 4. THỰC NGHIỆM VÀ ĐÁNH GIÁ ĐỘ TRỄ
     # ==========================================================================
     new_body_tail.append(make_heading("THỰC NGHIỆM VÀ ĐÁNH GIÁ ĐỘ TRỄ", level=1, bm_id=121, bm_name="_Toc3000021", page_break=True))
     new_body_tail.append(make_heading("Mô hình thực nghiệm", level=2, bm_id=122, bm_name="_Toc3000022"))
-
     new_body_tail.append(make_para([
-        "Mô hình thực nghiệm được xây dựng với các thành phần phần cứng và phần mềm liệt kê chi tiết trong Bảng 4.1, đấu nối theo sơ đồ nguyên lý tại Hình 4.1. Chân GPIO26 của ESP32 được cấu hình làm ngõ ra số (OUTPUT) điều khiển ngõ vào IN của module relay 5V DC (tích cực mức cao HIGH để đóng tiếp điểm thường mở NO cấp nguồn cho tải). Nút nhấn vật lý được nối giữa chân GPIO27 và chân GND, sử dụng điện trở kéo lên nội (INPUT_PULLUP) kết hợp thuật toán chống dội phím (debounce) 50 ms."
+        "Mô hình gồm các thành phần trong Bảng 4.1, đấu nối như Hình 4.1. ESP32 điều khiển relay bằng một chân ra, nút nhấn nối vào một chân vào của ESP32, tiếp điểm relay đóng ngắt mạch cấp nguồn cho thiết bị tải."
     ]))
 
     hw_rows = [
-        ["1", "Vi điều khiển ESP32", "Kit ESP32-WROOM-32, Wi-Fi IEEE 802.11 b/g/n 2,4 GHz [2]", "Nhận lệnh MQTT, điều khiển relay (GPIO26), đọc nút nhấn (GPIO27) và gửi phản hồi"],
-        ["2", "Module Relay", "Module 1 kênh 5V DC, cách ly quang Optocoupler, tiếp điểm 10A/250VAC", "Chấp hành đóng/ngắt mạch nguồn cấp cho thiết bị tải qua tiếp điểm COM – NO"],
-        ["3", "Nút nhấn tại chỗ", "Nút nhấn nhả Tactile 4 chân, nối chân GPIO27 với GND (INPUT_PULLUP)", "Đảo trạng thái relay trực tiếp tại mạch (chống dội phím 50 ms)"],
-        ["4", "Thiết bị tải", "Đèn báo phụ tải thực nghiệm đấu nối qua tiếp điểm thường mở (NO)", "Phụ tải kiểm chứng trạng thái đóng/ngắt vật lý"],
-        ["5", "MQTT Broker", "EMQX / Aedes MQTT Broker v3.1.1 (TCP cổng 1883, WebSocket cổng 8083) [3]", "Quản lý phiên kết nối, định tuyến bản tin theo QoS, lưu giữ Retain và phát LWT"],
-        ["6", "Thư viện trên ESP32", "Thư viện arduino-mqtt (256dpi v2.5.2) [4] và ArduinoJson", "Thực thi giao thức MQTT client qua TCP/IP và đóng gói/giải mã dữ liệu JSON"],
-        ["7", "Thư viện trên Web", "Thư viện MQTT.js (v5.10.1) chạy trên trình duyệt Web [5]", "Kết nối Broker qua WebSocket, phát lệnh, đồng bộ trạng thái và đo tự động RTT"],
+        ["1", "ESP32", "Nhận lệnh, điều khiển relay và gửi trạng thái"],
+        ["2", "Module Relay", "Đóng ngắt nguồn cấp cho thiết bị tải"],
+        ["3", "Nút nhấn", "Đổi trạng thái thiết bị tại chỗ"],
+        ["4", "Thiết bị tải", "Thiết bị được đóng ngắt"],
+        ["5", "EMQX Broker", "Chuyển tiếp bản tin MQTT"],
+        ["6", "Thư viện arduino-mqtt", "Giao tiếp MQTT trên ESP32"],
+        ["7", "Thư viện MQTT.js", "Giao tiếp MQTT trên Web Dashboard"],
     ]
-    new_body_tail.append(make_table([650, 1750, 3100, 3288],
-                                    ["STT", "Thành phần", "Thông số kỹ thuật / Cấu hình", "Chức năng trong hệ thống"],
-                                    hw_rows, col_aligns=['center', 'left', 'left', 'left']))
-    new_body_tail.append(make_caption('Bảng', 4, 1, 'Thông số kỹ thuật các thành phần trong mô hình thực nghiệm', bm_id=123, bm_name='_Toc3000023'))
+    new_body_tail.append(make_table([1000, 2800, 4988],
+                                    ["STT", "Thành phần", "Chức năng"],
+                                    hw_rows, col_aligns=['center', 'left', 'left']))
+    new_body_tail.append(make_caption('Bảng', 4, 1, 'Thành phần của mô hình thực nghiệm', bm_id=123, bm_name='_Toc3000023'))
 
     new_body_tail.append(make_image_para('rId506', 401, 'hinh_4_1_so_do_lap_rap.png',
-                                         'Sơ đồ đấu nối phần cứng và kết nối mạng mô hình thực nghiệm',
-                                         os.path.join(fig_dir, 'hinh_4_1_so_do_lap_rap.png')))
-    new_body_tail.append(make_caption('Hình', 4, 1, 'Sơ đồ đấu nối phần cứng và kết nối mạng mô hình thực nghiệm', bm_id=124, bm_name='_Toc3000024'))
+                                         'Sơ đồ đấu nối mô hình thực nghiệm',
+                                         os.path.join(media_dir, 'hinh_4_1_so_do_lap_rap.png'), target_cx=5100000, max_cy=3350000))
+    new_body_tail.append(make_caption('Hình', 4, 1, 'Sơ đồ đấu nối mô hình thực nghiệm', bm_id=124, bm_name='_Toc3000024'))
 
-    new_body_tail.append(make_heading("Kiểm thử chức năng điều khiển và phản hồi trạng thái", level=2, bm_id=125, bm_name="_Toc3000025"))
+    new_body_tail.append(make_heading("Kiểm thử chức năng", level=2, bm_id=125, bm_name="_Toc3000025"))
     new_body_tail.append(make_para([
-        "Trước khi tiến hành đo độ trễ, hệ thống được kiểm thử qua ba tình huống vận hành nhằm đánh giá tính đúng đắn của vòng phản hồi trạng thái và cơ chế giám sát kết nối LWT. Nội dung và kết quả ghi nhận thực tế được trình bày tại Bảng 4.2."
+        "Kiểm thử ba tình huống để kiểm tra phản hồi trạng thái. Nội dung và kết quả ghi trong Bảng 4.2."
     ]))
 
     func_rows = [
-        ["1", "Điều khiển từ xa qua Web", "Nhấn liên tiếp nút Bật (ON) và Tắt (OFF) trên Web Dashboard (ở mức QoS 1)",
-         "Relay đóng/ngắt đúng lệnh; giao diện chỉ cập nhật trạng thái khi nhận được bản tin từ dt42/state",
-         "Đạt (100%). Relay đóng/ngắt chính xác; giao diện cập nhật trạng thái ON (RTT = 25,32 ms) và OFF (RTT = 24,82 ms) ngay khi nhận gói dt42/state."],
-        ["2", "Tác động nút nhấn tại chỗ", "Nhấn nút nhấn vật lý (GPIO27) tại mạch để đảo trạng thái thiết bị",
-         "Relay đảo trạng thái; ESP32 gửi dt42/state với t_send = 0; giao diện cập nhật trạng thái và không tính RTT",
-         "Đạt (100%). ESP32 phát gói {\"state\":\"ON\",\"cmd_id\":0,\"t_send\":0}; giao diện đồng bộ tức thời sang ON và bỏ qua phép tính RTT."],
-        ["3", "Mất kết nối đột ngột (LWT)", "Ngắt kết nối nguồn/mạng của ESP32 đột ngột khi đang vận hành",
-         "Broker phát bản tin LWT {\"online\":false}; giao diện báo Offline và khóa các nút điều khiển",
-         "Đạt (100%). Broker tự động phát gói dt42/status {\"online\":false} (Retain); giao diện chuyển sang Offline và vô hiệu hóa nút Bật/Tắt."],
+        ["Điều khiển từ Web", "Nhấn nút Bật/Tắt trên Web Dashboard",
+         "Relay đóng hoặc ngắt, giao diện cập nhật theo bản tin dt42/state",
+         "Relay đóng hoặc ngắt theo lệnh, giao diện hiển thị đúng trạng thái mới"],
+        ["Nút nhấn tại chỗ", "Nhấn nút nhấn trên mạch",
+         "Relay đổi trạng thái, giao diện cập nhật theo trạng thái mới",
+         "Relay đổi trạng thái, giao diện cập nhật trạng thái mới và không tính RTT"],
+        ["Mất kết nối", "Ngắt nguồn ESP32",
+         "Giao diện báo mất kết nối và khóa nút điều khiển",
+         "Broker phát bản tin LWT, giao diện báo mất kết nối và khóa nút điều khiển"],
     ]
-    new_body_tail.append(make_table([550, 1550, 1950, 2150, 2588],
-                                    ["STT", "Tình huống", "Thao tác kiểm thử", "Kết quả cần đạt", "Kết quả ghi nhận thực tế"],
-                                    func_rows, col_aligns=['center', 'left', 'left', 'left', 'left']))
-    new_body_tail.append(make_caption('Bảng', 4, 2, 'Kết quả kiểm thử chức năng điều khiển và phản hồi trạng thái', bm_id=126, bm_name='_Toc3000026'))
+    new_body_tail.append(make_table([1650, 2100, 2500, 2538],
+                                    ["Tình huống", "Thao tác", "Kết quả cần đạt", "Kết quả ghi nhận"],
+                                    func_rows, col_aligns=['left', 'left', 'left', 'left']))
+    new_body_tail.append(make_caption('Bảng', 4, 2, 'Kiểm thử chức năng điều khiển và phản hồi trạng thái', bm_id=126, bm_name='_Toc3000026'))
 
-    new_body_tail.append(make_heading("Kết quả đo và đánh giá độ trễ truyền thông", level=2, bm_id=127, bm_name="_Toc3000027"))
+    new_body_tail.append(make_heading("Đo độ trễ truyền thông", level=2, bm_id=127, bm_name="_Toc3000027"))
     new_body_tail.append(make_para([
-        "Để đánh giá định lượng ảnh hưởng của cơ chế QoS đến độ trễ phản hồi, kịch bản đo tự động trên Web Dashboard phát 30 lệnh điều khiển liên tiếp (luân phiên ON và OFF) cho từng mức QoS 0, QoS 1 và QoS 2 trong cùng điều kiện mạng Wi-Fi 2,4 GHz. Ở mỗi đợt đo, mức QoS của bản tin phát (Publisher) và mức QoS đăng ký nhận (Subscriber) trên cả hai chặng đều được thiết lập đồng nhất. Kết quả thống kê tỷ lệ phản hồi thành công, giá trị RTT nhỏ nhất, lớn nhất, trung bình và độ lệch chuẩn mẫu theo công thức (2.1) – (2.2) được tổng hợp tại Bảng 4.3; bộ dữ liệu chi tiết của từng lần đo được trình bày tại Bảng PL.1 (Phụ lục) và trực quan hóa trên Hình 4.2."
+        "Với mỗi mức QoS 0, QoS 1 và QoS 2, gửi 30 lệnh liên tiếp trong cùng điều kiện mạng Wi-Fi. Trong mỗi lần đo, mức QoS của Publisher và Subscriber đặt giống nhau. Web Dashboard ghi RTT của từng lệnh theo công thức (2.1). Lệnh không nhận được phản hồi được tính là không thành công."
+    ]))
+    new_body_tail.append(make_para([
+        "Trong cả 30 lần đo của mỗi mức QoS, giao diện đều nhận đủ 30 bản tin phản hồi (tỷ lệ phản hồi 100%). Bảng 4.3 ghi giá trị RTT nhỏ nhất, lớn nhất và trung bình của mỗi mức QoS. Giá trị từng lần đo ghi trong Phụ lục."
     ]))
 
     rtt_summary_rows = [
-        ["QoS 0", "30", "100,0%", fmt(q0['min']), fmt(q0['max']), fmt(q0['mean']), fmt(q0['sd'])],
-        ["QoS 1", "30", "100,0%", fmt(q1['min']), fmt(q1['max']), fmt(q1['mean']), fmt(q1['sd'])],
-        ["QoS 2", "30", "100,0%", fmt(q2['min']), fmt(q2['max']), fmt(q2['mean']), fmt(q2['sd'])],
+        ["QoS 0", fmt(q0['min']), fmt(q0['max']), fmt(q0['mean'])],
+        ["QoS 1", fmt(q1['min']), fmt(q1['max']), fmt(q1['mean'])],
+        ["QoS 2", fmt(q2['min']), fmt(q2['max']), fmt(q2['mean'])],
     ]
-    new_body_tail.append(make_table([1100, 1100, 1350, 1300, 1300, 1350, 1288],
-                                    ["Mức QoS", "Số lệnh (N)", "Tỷ lệ phản hồi", "RTT nhỏ nhất (ms)", "RTT lớn nhất (ms)", "RTT trung bình (ms)", "Độ lệch chuẩn s (ms)"],
-                                    rtt_summary_rows, col_aligns=['center']*7))
-    new_body_tail.append(make_caption('Bảng', 4, 3, 'Kết quả thống kê độ trễ khứ hồi (RTT) theo mức QoS (N = 30)', bm_id=128, bm_name='_Toc3000028'))
-
-    new_body_tail.append(make_image_para('rId507', 402, 'hinh_4_2_bieu_do_rtt.png',
-                                         'Biểu đồ kết quả đo RTT qua 30 lần đo và phân bố thống kê theo mức QoS',
-                                         os.path.join(fig_dir, 'hinh_4_2_bieu_do_rtt.png')))
-    new_body_tail.append(make_caption('Hình', 4, 2, 'Biểu đồ kết quả đo RTT qua 30 lần đo và phân bố thống kê theo mức QoS', bm_id=134, bm_name='_Toc3000034'))
+    new_body_tail.append(make_table([1688, 2350, 2350, 2400],
+                                    ["Mức QoS", "RTT nhỏ nhất (ms)", "RTT lớn nhất (ms)", "RTT trung bình (ms)"],
+                                    rtt_summary_rows, col_aligns=['center']*4))
+    new_body_tail.append(make_caption('Bảng', 4, 3, 'Kết quả đo RTT theo mức QoS', bm_id=128, bm_name='_Toc3000028'))
 
     new_body_tail.append(make_para([
-        ("Nhận xét và đánh giá kết quả: ", {'bold': True}),
-        (f"Số liệu thực nghiệm tại Bảng 4.3 và Hình 4.2 hoàn toàn phù hợp với cơ sở lý thuyết tại Bảng 2.1. Cụ thể, trong môi trường mạng cục bộ ổn định, cả ba mức QoS đều đạt tỷ lệ phản hồi thành công 100,0% (30/30 lệnh), nhưng độ trễ khứ hồi trung bình tăng rõ rệt theo số bước bắt tay: QoS 0 đạt thấp nhất với RTT trung bình là {fmt(q0['mean'])} ms (s = {fmt(q0['sd'])} ms) do chỉ truyền 1 gói PUBLISH trên mỗi chặng; QoS 1 có RTT trung bình là {fmt(q1['mean'])} ms (s = {fmt(q1['sd'])} ms), tăng thêm 8,62 ms (+56,5% so với QoS 0) do phát sinh gói xác nhận PUBACK trên từng chặng; trong khi đó QoS 2 có RTT trung bình lên tới {fmt(q2['mean'])} ms (s = {fmt(q2['sd'])} ms), cao gấp 2,58 lần (+158,4%) so với QoS 0 và tăng thêm 15,55 ms (+65,1%) so với QoS 1 do phải hoàn tất chu trình bắt tay 4 gói tin (PUBLISH – PUBREC – PUBREL – PUBCOMP).", {})
+        f"Theo Bảng 2.1, số gói tin trao đổi tăng từ QoS 0 đến QoS 2 nên RTT dự kiến tăng theo thứ tự này. Số liệu ở Bảng 4.3 phù hợp với dự kiến: RTT trung bình tăng từ {fmt(q0['mean'])} ms ở QoS 0 lên {fmt(q1['mean'])} ms ở QoS 1 và {fmt(q2['mean'])} ms ở QoS 2."
     ]))
     new_body_tail.append(make_para([
-        ("Lựa chọn mức QoS cho hệ thống: ", {'bold': True}),
-        (f"Đối với ứng dụng điều khiển thiết bị điện, QoS 0 tuy có độ trễ thấp nhất nhưng không có cơ chế truyền lại ở tầng MQTT khi nhiễu mạng tức thời. Ngược lại, QoS 2 làm tăng độ trễ lên gần 40 ms và tiêu tốn gấp đôi băng thông gói tin trong khi bản chất lệnh đặt trạng thái tuyệt đối (action = ON hoặc OFF) có tính lũy đẳng (idempotent – nhận lặp lại lệnh ON khi relay đã ON không làm sai lệch trạng thái mạch). Vì vậy, mức QoS 1 là lựa chọn tối ưu cho hệ thống ĐT42: đảm bảo mọi lệnh điều khiển và bản tin phản hồi đều được xác nhận tin cậy (At least once) với độ trễ trung bình chỉ {fmt(q1['mean'])} ms (nhỏ hơn rất nhiều so với ngưỡng cảm nhận độ trễ thao tác của con người là 100 ms).", {})
+        f"Nhận xét: QoS 0 có RTT trung bình thấp nhất nhưng không có bước xác nhận gói tin nên lệnh có thể bị mất khi đường truyền gián đoạn. QoS 2 trao đổi bốn gói tin trên mỗi chặng nên RTT trung bình cao nhất ({fmt(q2['mean'])} ms). QoS 1 có bước xác nhận PUBACK để gửi lại khi mất gói tin và có RTT trung bình {fmt(q1['mean'])} ms, thấp hơn QoS 2 là 15,55 ms. Vì lệnh Bật/Tắt chỉ đặt trạng thái cho relay nên việc nhận lặp bản tin ở QoS 1 không làm sai trạng thái thiết bị. Do đó, hệ thống sử dụng mức QoS 1."
     ]))
 
     # ==========================================================================
@@ -891,58 +915,53 @@ def build_docx():
     new_body_tail.append(make_heading("KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN", level=1, bm_id=129, bm_name="_Toc3000029", page_break=True))
     new_body_tail.append(make_heading("Kết luận", level=2, bm_id=130, bm_name="_Toc3000030"))
     new_body_tail.append(make_para([
-        "Đề tài ĐT42 đã hoàn thành đầy đủ các mục tiêu đề ra và đạt được các kết quả cụ thể sau:"
+        "Báo cáo trình bày hệ thống điều khiển thiết bị sử dụng MQTT với các nội dung sau:"
     ]))
     new_body_tail.append(make_para([
-        "Đã thiết kế và triển khai hoàn chỉnh hệ thống điều khiển thiết bị vòng kín sử dụng giao thức MQTT v3.1.1 gồm giao diện Web Dashboard (MQTT.js qua WebSocket cổng 8083), EMQX Broker và nút chấp hành ESP32-WROOM-32 điều khiển relay (qua TCP cổng 1883)."
+        "Hệ thống gồm Web Dashboard, MQTT Broker EMQX và ESP32 điều khiển relay."
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
     new_body_tail.append(make_para([
-        "Đã xây dựng cơ chế đồng bộ trạng thái hai chiều trên ba topic tách biệt (dt42/cmd, dt42/state, dt42/status) kết hợp cờ Retain, cơ chế di chúc LWT và trường đối chiếu mã phiên lệnh cmd_id. Hệ thống phản ánh chính xác trạng thái thực tế của thiết bị cả khi điều khiển qua Web, khi nhấn nút vật lý tại mạch và tự động khóa giao diện khi thiết bị mất kết nối."
+        "Lệnh và phản hồi trạng thái dùng hai topic riêng là dt42/cmd và dt42/state. Giao diện chỉ đổi trạng thái hiển thị khi nhận bản tin trên topic dt42/state."
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
     new_body_tail.append(make_para([
-        f"Đã thực hiện đo kiểm 30 lệnh cho mỗi mức QoS và xác định định lượng độ trễ khứ hồi trung bình: QoS 0 đạt {fmt(q0['mean'])} ± {fmt(q0['sd'])} ms, QoS 1 đạt {fmt(q1['mean'])} ± {fmt(q1['sd'])} ms và QoS 2 đạt {fmt(q2['mean'])} ± {fmt(q2['sd'])} ms, từ đó xác lập QoS 1 là mức cấu hình tối ưu giữa độ tin cậy và tốc độ phản hồi."
+        ("RTT được xác định bằng hiệu của t", {}), ("ack", {'vert': 'subscript'}),
+        (" và t", {}), ("send", {'vert': 'subscript'}),
+        (f" tại Web Dashboard và đo ở ba mức QoS 0, QoS 1, QoS 2 với 30 lần đo mỗi mức. RTT trung bình đạt {fmt(q0['mean'])} ms (QoS 0), {fmt(q1['mean'])} ms (QoS 1) và {fmt(q2['mean'])} ms (QoS 2); hệ thống sử dụng mức QoS 1.", {})
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
 
     new_body_tail.append(make_heading("Hướng phát triển", level=2, bm_id=131, bm_name="_Toc3000031"))
     new_body_tail.append(make_para([
-        "Tích hợp mã hóa đường truyền bằng giao thức TLS/SSL (MQTTS trên cổng 8883 và WSS trên cổng 8084) kết hợp xác thực tài khoản mật khẩu trên Broker để đảm bảo an toàn thông tin khi triển khai qua môi trường Internet công cộng."
+        "Mã hóa đường truyền bằng TLS (MQTTS)."
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
     new_body_tail.append(make_para([
-        "Bổ sung cảm biến đo dòng điện thực tế (như ACS712 hoặc PZEM-004T) ở phía sau tiếp điểm relay nhằm xác nhận thiết bị tải thực sự tiêu thụ công suất, phát hiện kịp thời sự cố đứt tải hoặc dính tiếp điểm cơ khí của relay."
+        "Thêm cảm biến dòng điện sau relay để xác nhận thiết bị tải đang hoạt động."
     ], style='ListParagraph', num_id='31', ilvl='0', left='0', first_line='720'))
 
     # ==========================================================================
     # DANH MỤC TÀI LIỆU THAM KHẢO
     # ==========================================================================
     new_body_tail.append(make_heading("DANH MỤC TÀI LIỆU THAM KHẢO", level=1, bm_id=132, bm_name="_Toc3000032", page_break=True, unnumbered=True))
-    new_body_tail.append(ref_table_178)
+    new_body_tail.append(ref_table)
 
     # ==========================================================================
     # PHỤ LỤC
     # ==========================================================================
     new_body_tail.append(make_heading("PHỤ LỤC", level=1, bm_id=133, bm_name="_Toc3000033", page_break=True, unnumbered=True))
     new_body_tail.append(make_para([
-        "Bảng PL.1 ghi nhận chi tiết giá trị độ trễ khứ hồi (RTT) của toàn bộ 30 lần đo liên tiếp ở từng mức chất lượng dịch vụ QoS 0, QoS 1 và QoS 2. Toàn bộ mã nguồn phần mềm nhúng ESP32 (firmware/esp32_dt42_mqtt), giao diện Web Dashboard (web/) và kịch bản đo kiểm tự động (benchmark/) được lưu trữ tại kho dự án GitHub/mttqx."
+        "Bảng PL.1 ghi giá trị RTT của từng lần đo ở ba mức QoS."
     ]))
 
-    # Bảng PL.1 trình bày dạng bảng đôi (Lần đo 1..15 bên trái, 16..30 bên phải) để gọn trên 1 trang
+    # Bảng PL.1: 4 cột rộng rãi (Lần đo | QoS 0 (ms) | QoS 1 (ms) | QoS 2 (ms)), 30 hàng, cỡ chữ chuẩn 13pt
     pl_rows = []
-    for i in range(15):
-        r_idx = i + 15
-        pl_rows.append([
-            str(i + 1), fmt(s0[i]), fmt(s1[i]), fmt(s2[i]),
-            str(r_idx + 1), fmt(s0[r_idx]), fmt(s1[r_idx]), fmt(s2[r_idx])
-        ])
-    pl_rows.append([
-        "TB (Mean)", fmt(q0['mean']), fmt(q1['mean']), fmt(q2['mean']),
-        "Độ lệch (s)", fmt(q0['sd']), fmt(q1['sd']), fmt(q2['sd'])
-    ])
+    for i in range(30):
+        pl_rows.append([str(i + 1), fmt(s0[i]), fmt(s1[i]), fmt(s2[i])])
+
     new_body_tail.append(make_table(
-        [950, 1149, 1149, 1146, 950, 1148, 1148, 1148],
-        ["Lần đo", "QoS 0 (ms)", "QoS 1 (ms)", "QoS 2 (ms)", "Lần đo", "QoS 0 (ms)", "QoS 1 (ms)", "QoS 2 (ms)"],
-        pl_rows, col_aligns=['center']*8
+        [1788, 2333, 2333, 2334],
+        ["Lần đo", "QoS 0 (ms)", "QoS 1 (ms)", "QoS 2 (ms)"],
+        pl_rows, col_aligns=['center']*4, cell_pad=20
     ))
-    new_body_tail.append(make_para([("Bảng PL.1. Giá trị RTT chi tiết của 30 lần đo ở ba mức QoS", {})],
+    new_body_tail.append(make_para([("Bảng PL.1. Giá trị RTT của từng lần đo", {})],
                                    style='Caption', first_line=None))
 
     new_body_tail.append(final_sectPr)
@@ -957,18 +976,22 @@ def build_docx():
 
     # Repackage into .docx
     out_paths = [
-        r'D:\dow\Báo cáo\Bao_cao_cuoi_ky_IoT_DT42_MQTT (1).docx',
+        r'C:\Users\Admin\Documents\GitHub\mttqx\docs\Bao_cao_cuoi_ky_IoT_DT42_MQTT.docx',
         r'D:\dow\Bao_cao_cuoi_ky_IoT_DT42_MQTT.docx',
-        r'C:\Users\Admin\Documents\GitHub\mttqx\docs\Bao_cao_cuoi_ky_IoT_DT42_MQTT.docx'
+        r'D:\dow\Báo cáo\Bao_cao_cuoi_ky_IoT_DT42_MQTT.docx',
+        r'D:\dow\Báo cáo\Bao_cao_cuoi_ky_IoT_DT42_MQTT (1).docx',
     ]
     for out_p in out_paths:
-        with zipfile.ZipFile(out_p, 'w', zipfile.ZIP_DEFLATED) as zf:
-            for root, dirs, files in os.walk(work_dir):
-                for file in files:
-                    full_path = os.path.join(root, file)
-                    rel_path = os.path.relpath(full_path, work_dir).replace('\\', '/')
-                    zf.write(full_path, rel_path)
-        print("Saved updated report to:", out_p, f"({os.path.getsize(out_p)} bytes)")
+        try:
+            with zipfile.ZipFile(out_p, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for root, dirs, files in os.walk(work_dir):
+                    for file in files:
+                        full_path = os.path.join(root, file)
+                        rel_path = os.path.relpath(full_path, work_dir).replace('\\', '/')
+                        zf.write(full_path, rel_path)
+            print("Saved updated report to:", out_p, f"({os.path.getsize(out_p)} bytes)")
+        except PermissionError:
+            print("LOCKED (currently open in Word/WPS):", out_p)
 
 if __name__ == '__main__':
     build_docx()
