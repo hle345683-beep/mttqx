@@ -214,6 +214,20 @@
     });
   }
 
+  const reactorPanel   = document.getElementById('reactor-panel');
+  const reactorStage   = document.getElementById('reactor-stage');
+  const svgCoreState   = document.getElementById('svg-core-state');
+  const coreModeLabel  = document.getElementById('core-mode-label');
+
+  if (reactorStage) {
+    reactorStage.style.cursor = 'pointer';
+    reactorStage.title = 'Nhấn vào Lõi Năng Lượng HUY để Đóng/Ngắt Relay';
+    reactorStage.addEventListener('click', () => {
+      const nextAct = relayEl.textContent.trim() === 'ON' ? 'OFF' : 'ON';
+      sendCommand(nextAct);
+    });
+  }
+
   function connectBroker() {
     if (client) {
       try { client.end(true); } catch (e) {}
@@ -221,7 +235,7 @@
     }
     const url = brokerInput.value.trim();
     brokerBadge.textContent = 'UPLINK: CONNECTING...';
-    brokerBadge.className = 'badge badge-offline';
+    brokerBadge.className = 'hud-pill pill-offline';
 
     startCloudEsp32Sim(url);
 
@@ -233,7 +247,7 @@
 
     client.on('connect', () => {
       brokerBadge.textContent = 'UPLINK: ONLINE';
-      brokerBadge.className = 'badge badge-online';
+      brokerBadge.className = 'hud-pill pill-online';
       client.subscribe('dt42/state', { qos: 2 });
       client.subscribe('dt42/status', { qos: 1 });
       appendLog(`Đã kết nối Broker (${url}); Đăng ký dt42/state, dt42/status`);
@@ -241,7 +255,7 @@
 
     client.on('error', () => {
       brokerBadge.textContent = 'UPLINK: ERROR';
-      brokerBadge.className = 'badge badge-offline';
+      brokerBadge.className = 'hud-pill pill-offline';
     });
 
     client.on('message', (topic, message, packet) => {
@@ -251,7 +265,7 @@
         if (topic === 'dt42/status') {
           esp32Online = Boolean(data.online);
           esp32Badge.textContent = esp32Online ? 'ESP32 UNIT: ONLINE' : 'ESP32 UNIT: OFFLINE';
-          esp32Badge.className = esp32Online ? 'badge badge-online' : 'badge badge-offline';
+          esp32Badge.className = esp32Online ? 'hud-pill pill-online' : 'hud-pill pill-offline';
           setControlsEnabled(esp32Online);
           appendLog(`RECV dt42/status [Retain=${packet.retain}] ${raw}`);
           return;
@@ -260,7 +274,10 @@
         if (topic === 'dt42/state') {
           const stateStr = data.state === 'ON' ? 'ON' : 'OFF';
           relayEl.textContent = stateStr;
-          relayEl.className = 'state-value ' + (stateStr === 'ON' ? 'state-on' : 'state-off');
+          relayEl.className = 'gauge-val ' + (stateStr === 'ON' ? 'state-on' : 'state-off');
+          if (svgCoreState) svgCoreState.textContent = `RELAY: ${stateStr}`;
+          if (coreModeLabel) coreModeLabel.textContent = stateStr === 'ON' ? 'CORE STATUS: ENGAGED' : 'CORE STATUS: STANDBY';
+          if (reactorPanel) reactorPanel.classList.toggle('reactor-active', stateStr === 'ON');
 
           if (pendingCmd && data.t_send > 0 && Number(data.t_send) === pendingCmd.t_send) {
             const tAck = Number((performance.now() + performance.timeOrigin).toFixed(2));
@@ -276,7 +293,7 @@
             updateSummaryTable();
             done(rtt);
           } else {
-            lastRttEl.textContent = '— (Đồng bộ/Tại chỗ)';
+            lastRttEl.textContent = 'SYNC (0 ms)';
             appendLog(`SYNC dt42/state [Retain=${packet.retain}] ${raw}`);
           }
         }
