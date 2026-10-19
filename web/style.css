@@ -1,17 +1,17 @@
 :root {
   color-scheme: dark;
-  --black-void: #030508;
-  --black-armor: #080b11;
-  --black-panel: #0c1018;
-  --gold-neon: #fbbf24;
+  --void: #030407;
+  --obsidian: #070a10;
+  --panel-bg: rgba(8, 11, 17, 0.92);
+  --gold-bright: #fbbf24;
   --gold-core: #f59e0b;
-  --gold-deep: #b45309;
-  --gold-border: rgba(251, 191, 36, 0.38);
-  --gold-glow: rgba(251, 191, 36, 0.45);
-  --white-pure: #ffffff;
-  --white-hud: #f1f5f9;
-  --metal-gray: #94a3b8;
-  --red-danger: #ef4444;
+  --gold-dim: rgba(251, 191, 36, 0.32);
+  --gold-faint: rgba(251, 191, 36, 0.1);
+  --white: #ffffff;
+  --white-dim: rgba(255, 255, 255, 0.72);
+  --muted: #94a3b8;
+  --danger: #ef4444;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 * {
@@ -20,782 +20,1052 @@
   padding: 0;
 }
 
-body {
+html, body {
+  width: 100%;
+  height: 100%;
+  background-color: var(--void) !important;
+  color: var(--white) !important;
   font-family: "Rajdhani", "Segoe UI", sans-serif;
-  font-size: 14px;
-  line-height: 1.4;
-  background-color: var(--black-void) !important;
-  color: var(--white-hud) !important;
-  min-height: 100vh;
-  overflow-x: hidden;
-  position: relative;
+  overflow: hidden;
+  user-select: none;
 }
 
-/* Lưới bản vẽ cơ khí J.A.R.V.I.S. */
-.hud-bg-grid {
+/* ========================================================================= */
+/* LỚP NỀN BẢN VẼ KỸ THUẬT FUI (HÌNH 1 & HÌNH 3)                             */
+/* ========================================================================= */
+.fui-canvas {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-color: #030508;
+}
+
+.fui-grid {
+  position: absolute;
+  inset: 0;
   background-image:
-    radial-gradient(circle at 50% 42%, rgba(245, 158, 11, 0.14) 0%, transparent 55%),
-    linear-gradient(rgba(251, 191, 36, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(251, 191, 36, 0.05) 1px, transparent 1px);
-  background-size: 100% 100%, 28px 28px, 28px 28px;
+    radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.14) 0%, transparent 58%),
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 36px 36px, 36px 36px;
 }
 
-.hud-vignette {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  box-shadow: inset 0 0 110px rgba(0, 0, 0, 0.9);
+.fui-crosshairs {
+  position: absolute;
+  inset: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-.hud-scanlines {
-  position: fixed;
+.fui-crosshairs::before,
+.fui-crosshairs::after {
+  content: "";
+  position: absolute;
+  background: rgba(251, 191, 36, 0.14);
+}
+.fui-crosshairs::before {
+  top: 50%; left: 0; right: 0; height: 1px;
+}
+.fui-crosshairs::after {
+  left: 50%; top: 0; bottom: 0; width: 1px;
+}
+
+.fui-scanline {
+  position: absolute;
   inset: 0;
-  z-index: 1;
-  pointer-events: none;
   background: repeating-linear-gradient(
     to bottom,
     transparent 0px,
     transparent 3px,
-    rgba(0, 0, 0, 0.22) 4px
+    rgba(0, 0, 0, 0.25) 4px
   );
 }
 
-/* Viền cảnh báo cơ khí Vàng - Đen (Jaeger Hazard Stripes) */
-.cockpit-frame-top {
-  position: relative;
-  z-index: 3;
-  display: grid;
-  grid-template-columns: 140px 1fr 140px;
-  align-items: center;
-  background: #05070b;
-  border-bottom: 1px solid var(--gold-border);
-  height: 22px;
-}
-
-.hazard-strip,
-.hazard-bar-top,
-.panel-hazard {
-  background: repeating-linear-gradient(
-    -45deg,
-    var(--gold-core),
-    var(--gold-core) 8px,
-    #05070b 8px,
-    #05070b 16px
-  );
-  height: 100%;
-}
-
-.cockpit-hud-ruler {
-  font-family: "Share Tech Mono", Consolas, monospace;
-  font-size: 10.5px;
-  color: var(--gold-neon);
-  text-align: center;
-  letter-spacing: 2px;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-/* THANH HEADER BUỒNG LÁI */
-.hud-header {
-  position: relative;
-  z-index: 3;
-  background: linear-gradient(90deg, #06090f 0%, #0f1520 50%, #06090f 100%);
-  border-bottom: 2px solid var(--gold-neon);
-  box-shadow: 0 4px 25px rgba(245, 158, 11, 0.22);
-  padding: 10px 22px;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 16px;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.armor-tag {
-  background: var(--gold-neon);
-  color: #000000;
-  font-family: "Orbitron", sans-serif;
-  font-weight: 900;
-  font-size: 12px;
-  padding: 6px 10px;
-  letter-spacing: 1px;
-  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
-}
-
-.header-eyebrow {
-  font-family: "Share Tech Mono", Consolas, monospace;
-  font-size: 11px;
-  color: var(--gold-neon);
-  letter-spacing: 1.5px;
-}
-
-.hud-header h1 {
-  font-family: "Orbitron", "Segoe UI", sans-serif;
-  font-size: 15.5px;
-  font-weight: 800;
-  color: var(--white-pure);
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  text-shadow: 0 0 12px rgba(251, 191, 36, 0.35);
-}
-
-/* Huy hiệu HUY trung tâm Header */
-.header-center-crest {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.crest-wing {
-  width: 36px;
-  height: 10px;
-  border-top: 2px solid var(--gold-neon);
-  border-bottom: 1px solid var(--white-pure);
-}
-.crest-wing.left { transform: skewX(-30deg); }
-.crest-wing.right { transform: skewX(30deg); }
-
-.crest-hex {
-  background: linear-gradient(180deg, #161d2a 0%, #06080c 100%);
-  border: 2px solid var(--gold-neon);
-  padding: 4px 22px;
-  text-align: center;
-  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 12px 100%, 0 50%);
-  box-shadow: 0 0 18px var(--gold-glow);
-}
-
-.crest-sub {
-  display: block;
-  font-family: "Share Tech Mono", monospace;
-  font-size: 9px;
-  color: var(--white-pure);
-  letter-spacing: 2px;
-}
-
-.crest-name {
-  font-family: "Orbitron", sans-serif;
-  font-size: 18px;
-  font-weight: 900;
-  color: var(--gold-neon);
-  letter-spacing: 4px;
-  text-shadow: 0 0 10px var(--gold-neon);
-}
-
-.header-right {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 10px;
-}
-
-.hud-pill {
-  font-family: "Share Tech Mono", Consolas, monospace;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 6px 12px;
-  letter-spacing: 0.8px;
-  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
-}
-
-.pill-online {
-  background: rgba(251, 191, 36, 0.18);
-  color: var(--gold-neon);
-  border: 1px solid var(--gold-neon);
-  box-shadow: 0 0 12px rgba(251, 191, 36, 0.3);
-}
-
-.pill-offline {
-  background: rgba(239, 68, 68, 0.16);
-  color: #fca5a5;
-  border: 1px solid var(--red-danger);
-}
-
-/* BỐ CỤC 3 CỘT BUỒNG LÁI (TRÁI - LÕI HUY GIỮA - PHẢI) */
-.cockpit-main {
-  position: relative;
-  z-index: 2;
-  max-width: 1440px;
-  margin: 14px auto;
-  padding: 0 16px 24px;
+/* Thước chia độ dọc bên trái (Giống Hình 1) */
+.fui-ruler-left {
+  position: absolute;
+  left: 8px;
+  top: 52px;
+  bottom: 24px;
+  width: 26px;
+  border-right: 1px solid rgba(251, 191, 36, 0.35);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-right: 5px;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.55);
 }
 
-.cockpit-grid {
-  display: grid;
-  grid-template-columns: 1fr 410px 1.15fr;
-  gap: 16px;
-  align-items: stretch;
-}
-
-.mecha-panel {
+.fui-ruler-left span {
   position: relative;
-  background: linear-gradient(180deg, rgba(13, 18, 27, 0.95) 0%, rgba(6, 9, 14, 0.98) 100%);
-  border: 1px solid var(--gold-border);
-  padding: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), inset 0 0 22px rgba(245, 158, 11, 0.05);
 }
-
-/* 4 Ngàm cơ khí góc Panel */
-.panel-corner {
+.fui-ruler-left span::after {
+  content: "";
   position: absolute;
-  width: 14px;
-  height: 14px;
-  border-color: var(--gold-neon);
-  border-style: solid;
-  pointer-events: none;
-}
-.panel-corner.tl { top: -1px; left: -1px; border-width: 3px 0 0 3px; }
-.panel-corner.tr { top: -1px; right: -1px; border-width: 3px 3px 0 0; }
-.panel-corner.bl { bottom: -1px; left: -1px; border-width: 0 0 3px 3px; }
-.panel-corner.br { bottom: -1px; right: -1px; border-width: 0 3px 3px 0; }
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border-bottom: 1px solid var(--gold-border);
-  padding-bottom: 8px;
-  margin-bottom: 12px;
+  right: -5px;
+  top: 50%;
+  width: 4px;
+  height: 1px;
+  background: var(--gold-bright);
 }
 
-.panel-header.no-margin {
-  border-bottom: none;
-  padding-bottom: 0;
-  margin-bottom: 0;
+.ruler-brand {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  color: var(--gold-bright);
+  letter-spacing: 2px;
+  font-weight: 700;
+  margin-top: 8px;
 }
 
-.panel-header-inline {
+/* Chữ ký chìm kiểu Shogun Bravo (Hình 2) */
+.jaeger-watermark {
+  position: absolute;
+  left: 48px;
+  bottom: 24px;
+  opacity: 0.22;
+}
+.wm-main {
+  font-family: "Orbitron", sans-serif;
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: var(--white);
+  line-height: 1;
+}
+.wm-sub {
+  font-family: "Share Tech Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--gold-bright);
+}
+
+/* ========================================================================= */
+/* THANH TOPBAR MẢNH KỸ THUẬT                                                */
+/* ========================================================================= */
+.fui-topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 44px;
+  z-index: 30;
+  background: rgba(5, 7, 11, 0.88);
+  border-bottom: 1px solid var(--gold-dim);
+  backdrop-filter: blur(8px);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--gold-border);
-  padding-bottom: 8px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-  gap: 8px;
+  padding: 0 20px;
 }
 
-.module-code {
-  background: var(--gold-neon);
-  color: #000000;
-  font-family: "Orbitron", sans-serif;
-  font-size: 10.5px;
-  font-weight: 900;
-  padding: 2px 8px;
-  clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
-}
-
-.mecha-panel h2 {
-  font-family: "Orbitron", "Segoe UI", sans-serif;
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--white-pure);
-  letter-spacing: 0.6px;
-}
-
-.panel-hazard {
-  margin-left: auto;
-  width: 48px;
-  height: 10px;
-  border: 1px solid var(--gold-neon);
-}
-
-/* Form cấu hình Uplink */
-.hud-form-group {
+.topbar-left {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 10px;
-  margin-bottom: 14px;
 }
 
-.hud-field label {
-  display: block;
+.fui-node-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--gold-bright);
+  box-shadow: 0 0 10px var(--gold-bright);
+  transform: rotate(45deg);
+}
+
+.fui-sys-title {
+  font-family: "Orbitron", sans-serif;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: var(--white);
+}
+
+.breadcrumb-item {
+  font-family: "Share Tech Mono", monospace;
+  font-size: 12px;
+  color: var(--gold-bright);
+  letter-spacing: 2px;
+  padding: 3px 14px;
+  border: 1px solid var(--gold-dim);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fui-badge {
   font-family: "Share Tech Mono", monospace;
   font-size: 11.5px;
-  color: var(--gold-neon);
-  margin-bottom: 4px;
-  letter-spacing: 0.6px;
+  padding: 3px 10px;
+  letter-spacing: 1px;
 }
 
-.hud-input-row {
-  display: flex;
-  gap: 8px;
+.badge-on {
+  color: var(--gold-bright);
+  border: 1px solid var(--gold-bright);
+  background: rgba(251, 191, 36, 0.14);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.25);
 }
 
-.hud-field input[type="text"],
-.hud-field select {
-  width: 100%;
-  background: #04060a;
-  color: var(--white-pure);
-  border: 1px solid var(--gold-border);
-  padding: 7px 10px;
-  font-family: "Share Tech Mono", Consolas, monospace;
-  font-size: 12.5px;
-  outline: none;
+.badge-off {
+  color: #fca5a5;
+  border: 1px solid var(--danger);
+  background: rgba(239, 68, 68, 0.14);
 }
 
-.hud-field input[type="text"]:focus,
-.hud-field select:focus {
-  border-color: var(--gold-neon);
-  box-shadow: 0 0 10px var(--gold-glow);
-}
-
-.sim-armor-box {
-  background: rgba(251, 191, 36, 0.08);
-  border: 1px solid var(--gold-border);
-  border-left: 3px solid var(--gold-neon);
-  padding: 8px 10px;
-}
-
-.checkbox-mecha {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
+.fui-mini-btn {
+  background: transparent;
+  color: var(--white);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 11.5px;
+  padding: 4px 10px;
   cursor: pointer;
-  font-size: 12.5px;
-  color: var(--white-hud);
+  letter-spacing: 1px;
+  transition: all 0.2s ease;
 }
 
-.checkbox-mecha input {
-  accent-color: var(--gold-neon);
-  margin-top: 3px;
+.fui-mini-btn.gold,
+.fui-mini-btn:hover {
+  border-color: var(--gold-bright);
+  color: #000;
+  background: var(--gold-bright);
+  font-weight: 700;
 }
 
-/* Cụm nút bấm cơ khí hạng nặng */
-.actuator-controls {
-  background: #06090e;
-  border: 1px solid var(--gold-border);
-  padding: 12px;
-  margin-bottom: 12px;
-}
-
-.actuator-label-bar {
+/* ========================================================================= */
+/* CỘT DOCK NÚT TRÒN BÊN PHẢI (GIỐNG HỆT HÌNH 1)                             */
+/* ========================================================================= */
+.fui-right-dock {
+  position: fixed;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 35;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dock-orb {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(8, 11, 17, 0.9);
+  border: 1.5px solid var(--gold-dim);
+  color: var(--white-dim);
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s var(--ease-out-expo);
+}
+
+.dock-orb svg {
+  width: 34px;
+  height: 34px;
+  transition: transform 0.4s var(--ease-out-expo);
+}
+
+.dock-orb:hover,
+.dock-orb.active {
+  color: var(--gold-bright);
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 18px rgba(251, 191, 36, 0.4), inset 0 0 10px rgba(251, 191, 36, 0.2);
+  transform: scale(1.1);
+}
+
+.dock-orb:hover svg {
+  transform: rotate(45deg);
+}
+
+.dock-tip {
+  position: absolute;
+  right: 60px;
+  white-space: nowrap;
+  background: #070a10;
+  border: 1px solid var(--gold-bright);
+  color: var(--gold-bright);
   font-family: "Share Tech Mono", monospace;
   font-size: 11px;
-  color: var(--metal-gray);
-  margin-bottom: 8px;
+  padding: 3px 8px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(8px);
+  transition: all 0.2s ease;
 }
 
-.btn-mecha-group {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 10px;
+.dock-orb:hover .dock-tip {
+  opacity: 1;
+  transform: translateX(0);
 }
 
-.btn-mecha {
-  font-family: "Orbitron", "Segoe UI", sans-serif;
-  font-size: 12px;
-  font-weight: 800;
-  padding: 10px 14px;
+/* ========================================================================= */
+/* SÂN KHẤU TRUNG TÂM & TRỤC ĐỐI XỨNG DỌC FUI (HÌNH 3)                       */
+/* ========================================================================= */
+.fui-stage {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.fui-vertical-spine {
+  position: absolute;
+  top: 52px;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 240px;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 1;
+}
+
+.spine-top-dome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.dome-ring {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--white);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.55), inset 0 0 10px var(--gold-bright);
+  position: relative;
+}
+.dome-ring::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border-radius: 50%;
+  background: var(--gold-bright);
+}
+
+.dome-label {
+  font-family: "Share Tech Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--white-dim);
+}
+
+.spine-line {
+  width: 2px;
+  flex: 1;
+  background: linear-gradient(to bottom, var(--white), rgba(251, 191, 36, 0.25));
+}
+
+.spine-bottom-radar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.radar-svg {
+  width: 115px;
+  height: 115px;
+}
+
+.radar-sweep {
+  transform-origin: 80px 80px;
+  animation: spin-cw 4s linear infinite;
+}
+
+.radar-readout {
+  display: flex;
+  gap: 14px;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 11.5px;
+  color: var(--white-dim);
+  margin-top: 2px;
+}
+.radar-readout b {
+  color: var(--gold-bright);
+}
+
+/* ========================================================================= */
+/* TỔ HỢP LÕI "HUY" & 4 CÁNH VỆ TINH BUNG RA MƯỢT MÀ                        */
+/* ========================================================================= */
+.core-assembly {
+  position: relative;
+  width: 1020px;
+  height: 640px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  transition: transform 0.55s var(--ease-out-expo), filter 0.55s var(--ease-out-expo);
+}
+
+/* Khi có cửa sổ Module (Lớp 3) mở lên, Lõi thu nhỏ nhẹ ở nền sau */
+.fui-stage.modal-open .core-assembly {
+  transform: scale(0.82);
+  filter: blur(2.5px) brightness(0.38);
+  pointer-events: none;
+}
+
+.central-core-trigger {
+  position: relative;
+  width: 390px;
+  height: 390px;
   cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  transition: all 0.15s ease;
-  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
-  display: inline-flex;
+  z-index: 10;
+  display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  transition: transform 0.45s var(--ease-out-expo);
 }
 
-.btn-mecha .btn-sub {
+.central-core-trigger:hover {
+  transform: scale(1.04);
+}
+
+.central-core-trigger:active {
+  transform: scale(0.97);
+}
+
+.master-fui-svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 22px rgba(245, 158, 11, 0.28));
+  transition: filter 0.4s ease;
+}
+
+.core-assembly.expanded .master-fui-svg,
+.core-assembly.relay-on .master-fui-svg {
+  filter: drop-shadow(0 0 36px rgba(251, 191, 36, 0.65));
+}
+
+.spin-cw-slow,
+.spin-ccw-med,
+.spin-cw-fast {
+  transform-origin: center;
+  transform-box: view-box;
+}
+.spin-cw-slow { animation: spin-cw 32s linear infinite; }
+.spin-ccw-med { animation: spin-ccw 20s linear infinite; }
+.spin-cw-fast { animation: spin-cw 11s linear infinite; }
+
+.core-assembly.relay-on .spin-cw-fast {
+  animation-duration: 3.5s;
+}
+.core-assembly.relay-on .spin-ccw-med {
+  animation-duration: 7s;
+}
+
+.svg-core-eyebrow {
   font-family: "Share Tech Mono", monospace;
-  font-size: 10px;
+  font-size: 10.5px;
+  fill: var(--white);
+  letter-spacing: 3px;
+}
+
+.svg-core-huy {
+  font-family: "Orbitron", sans-serif;
+  font-size: 46px;
+  font-weight: 900;
+  letter-spacing: 6px;
+}
+
+.svg-core-status {
+  font-family: "Share Tech Mono", monospace;
+  font-size: 13px;
+  font-weight: 700;
+  fill: var(--gold-bright);
+  letter-spacing: 2.5px;
+}
+
+.core-prompt-pill {
+  margin-top: -8px;
+  background: rgba(7, 10, 16, 0.92);
+  border: 1px solid var(--gold-bright);
+  color: var(--gold-bright);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 11.5px;
+  padding: 5px 14px;
+  letter-spacing: 1.5px;
+  box-shadow: 0 0 16px rgba(251, 191, 36, 0.25);
+  animation: pulse-border 2.2s infinite ease-in-out;
+}
+
+/* Đường mạch nối từ Lõi ra 4 cánh vệ tinh */
+.orbital-connectors {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.conn-line {
+  stroke-dasharray: 320;
+  stroke-dashoffset: 320;
+  transition: stroke-dashoffset 0.55s var(--ease-out-expo);
+}
+
+.conn-dot {
+  opacity: 0;
+  transition: opacity 0.35s ease 0.25s;
+}
+
+.core-assembly.expanded .conn-line {
+  stroke-dashoffset: 0;
+}
+
+.core-assembly.expanded .conn-dot {
+  opacity: 1;
+}
+
+/* 4 Cánh Vệ Tinh Cơ Khí (Ẩn trong tâm ở Lớp 1 -> Bung ra mượt mà ở Lớp 2) */
+.orbital-wing {
+  position: absolute;
+  width: 245px;
+  background: linear-gradient(135deg, rgba(12, 17, 26, 0.95) 0%, rgba(5, 7, 11, 0.96) 100%);
+  border: 1px solid var(--gold-bright);
+  padding: 12px 14px;
+  cursor: pointer;
+  z-index: 8;
+  opacity: 0;
+  pointer-events: none;
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.85), inset 0 0 16px rgba(251, 191, 36, 0.08);
+  transition:
+    transform 0.55s var(--ease-out-expo),
+    opacity 0.45s var(--ease-out-expo),
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+
+/* Vị trí thu gọn trong lõi */
+.wing-tl { top: 85px; left: 20px; transform: translate(180px, 110px) scale(0.4); }
+.wing-tr { top: 85px; right: 20px; transform: translate(-180px, 110px) scale(0.4); transition-delay: 0.05s; }
+.wing-bl { bottom: 85px; left: 20px; transform: translate(180px, -110px) scale(0.4); transition-delay: 0.1s; }
+.wing-br { bottom: 85px; right: 20px; transform: translate(-180px, -110px) scale(0.4); transition-delay: 0.15s; }
+
+/* Khi nhấn vào Lõi HUY -> Bung 4 cánh ra */
+.core-assembly.expanded .orbital-wing {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(0, 0) scale(1);
+}
+
+.core-assembly.expanded .orbital-wing:hover {
+  border-color: var(--white);
+  box-shadow: 0 0 24px rgba(251, 191, 36, 0.45);
+  transform: translateY(-4px) scale(1.03);
+}
+
+.wing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--gold-dim);
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+}
+
+.wing-idx {
+  font-family: "Share Tech Mono", monospace;
+  font-size: 10.5px;
+  color: var(--gold-bright);
+  letter-spacing: 1.5px;
+}
+
+.wing-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--white);
+  border-radius: 50%;
+}
+
+.orbital-wing h3 {
+  font-family: "Orbitron", sans-serif;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--white);
+  letter-spacing: 0.8px;
+}
+
+.orbital-wing p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 4px 0 8px;
+}
+
+.wing-metric {
+  display: flex;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 4px 8px;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.wing-metric strong {
+  color: var(--gold-bright);
+}
+
+.wing-action {
+  display: block;
+  text-align: right;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 11px;
+  color: var(--gold-bright);
+  letter-spacing: 1px;
+}
+
+/* ========================================================================= */
+/* LỚP 3: CỬA SỔ HOLOGRAM MODULE (CHỈ HIỆN KHI MỞ TỪ VỆ TINH / DOCK)         */
+/* ========================================================================= */
+.fui-modal {
+  position: fixed;
+  inset: 52px 84px 24px 48px;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  animation: modal-unfold 0.42s var(--ease-out-expo) forwards;
+}
+
+.fui-modal[hidden] {
+  display: none !important;
+}
+
+@keyframes modal-unfold {
+  from {
+    opacity: 0;
+    transform: scale(0.86) translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.fui-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 760px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: linear-gradient(180deg, rgba(11, 15, 23, 0.97) 0%, rgba(5, 7, 11, 0.99) 100%);
+  border: 1.5px solid var(--gold-bright);
+  padding: 22px 24px;
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.95), 0 0 30px rgba(245, 158, 11, 0.22);
+}
+
+.fui-modal-card.modal-wide {
+  max-width: 920px;
+}
+
+.fui-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: var(--white);
+  border-style: solid;
+  pointer-events: none;
+}
+.fui-corner.tl { top: -1px; left: -1px; border-width: 3px 0 0 3px; }
+.fui-corner.tr { top: -1px; right: -1px; border-width: 3px 3px 0 0; }
+.fui-corner.bl { bottom: -1px; left: -1px; border-width: 0 0 3px 3px; }
+.fui-corner.br { bottom: -1px; right: -1px; border-width: 0 3px 3px 0; }
+
+.modal-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--gold-dim);
+  padding-bottom: 10px;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.modal-sector {
+  font-family: "Share Tech Mono", monospace;
+  font-size: 11px;
+  color: var(--gold-bright);
+  letter-spacing: 2px;
+}
+
+.modal-topbar h2 {
+  font-family: "Orbitron", sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--white);
+  margin-top: 2px;
+}
+
+.topbar-btn-group {
+  display: flex;
+  gap: 8px;
+}
+
+.fui-close-btn {
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--gold-bright);
+  border: 1px solid var(--gold-bright);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 12px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fui-close-btn:hover {
+  background: var(--white);
+  color: #000;
+  border-color: var(--white);
+}
+
+/* Nội dung Module 01: Điều khiển Relay */
+.fui-Readout-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.fui-readout-box {
+  background: #04060a;
+  border: 1px solid var(--gold-dim);
+  border-left: 3px solid var(--gold-bright);
+  padding: 12px;
+}
+
+.ro-label {
+  display: block;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.ro-value {
+  display: block;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--white);
+  margin-top: 4px;
+}
+
+.state-on, .val-on {
+  color: var(--gold-bright) !important;
+  text-shadow: 0 0 12px var(--gold-bright);
+}
+
+.state-off, .val-off {
+  color: var(--muted) !important;
+}
+
+.fui-action-deck {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.fui-deck-btn {
+  padding: 14px;
+  cursor: pointer;
+  font-family: "Orbitron", sans-serif;
+  font-size: 13px;
+  text-align: center;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  transition: all 0.2s ease;
+}
+
+.fui-deck-btn .deck-tag {
+  display: block;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 10.5px;
+  margin-bottom: 3px;
   opacity: 0.85;
 }
 
-.btn-mecha:disabled {
-  opacity: 0.32;
+.fui-deck-btn:disabled,
+.fui-wide-btn:disabled,
+.fui-btn-engage:disabled {
+  opacity: 0.35;
   cursor: not-allowed;
-  box-shadow: none !important;
 }
 
-.btn-gold {
+.btn-engage {
   background: linear-gradient(135deg, #fde047 0%, #f59e0b 100%);
-  color: #000000 !important;
-  border: 1px solid #fef08a;
-  box-shadow: 0 0 15px rgba(245, 158, 11, 0.35);
+  color: #000;
+  border: 1px solid var(--white);
+  font-weight: 900;
 }
 
-.btn-gold:hover:not(:disabled) {
-  background: #ffffff;
-  color: #000000 !important;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.75);
+.btn-engage:hover:not(:disabled) {
+  background: var(--white);
+  box-shadow: 0 0 22px rgba(255, 255, 255, 0.7);
 }
 
-.btn-white {
-  background: #141b26;
-  color: var(--white-pure);
-  border: 1px solid var(--white-pure);
+.btn-shutdown {
+  background: #121824;
+  color: var(--white);
+  border: 1px solid var(--white);
+  font-weight: 800;
 }
 
-.btn-white:hover:not(:disabled) {
-  background: var(--white-pure);
-  color: #000000;
+.btn-shutdown:hover:not(:disabled) {
+  background: var(--white);
+  color: #000;
 }
 
-.btn-outline-gold {
-  background: rgba(251, 191, 36, 0.08);
-  color: var(--gold-neon);
-  border: 1px solid var(--gold-neon);
-}
-
-.btn-outline-gold:hover:not(:disabled) {
-  background: var(--gold-neon);
-  color: #000000;
-  box-shadow: 0 0 14px var(--gold-glow);
-}
-
-.btn-sm {
-  padding: 6px 11px;
-  font-size: 11px;
-}
-
-.btn-full {
+.fui-wide-btn {
   width: 100%;
-}
-
-.hud-rule-box {
-  background: rgba(255, 255, 255, 0.02);
-  border-left: 3px solid var(--gold-neon);
-  padding: 8px 10px;
-  font-size: 12.5px;
-  color: #cbd5e1;
-}
-
-.rule-title {
+  padding: 10px;
+  background: rgba(251, 191, 36, 0.08);
+  color: var(--gold-bright);
+  border: 1px solid var(--gold-bright);
   font-family: "Share Tech Mono", monospace;
-  color: var(--gold-neon);
+  font-size: 12.5px;
+  cursor: pointer;
+  margin-bottom: 14px;
+  transition: all 0.2s ease;
+}
+
+.fui-wide-btn:hover:not(:disabled) {
+  background: var(--gold-bright);
+  color: #000;
   font-weight: 700;
-  font-size: 11.5px;
-  margin-bottom: 2px;
+}
+
+.fui-spec-note {
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 3px solid var(--gold-bright);
+  padding: 9px 12px;
+  font-size: 13px;
+  color: #cbd5e1;
 }
 
 code {
   font-family: "Share Tech Mono", monospace;
-  color: var(--gold-neon);
-  background: rgba(251, 191, 36, 0.12);
-  padding: 1px 5px;
+  color: var(--gold-bright);
 }
 
-/* CỘT GIỮA: LÕI ARC REACTOR / JAEGER TURBINE CÁCH ĐIỆU TÊN "HUY" */
-.panel-center {
+/* Nội dung Module 02 & 03: Bảng đo RTT */
+.bench-toolbar {
   display: flex;
-  flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  background: radial-gradient(circle at 50% 44%, rgba(245, 158, 11, 0.16) 0%, rgba(8, 11, 18, 0.98) 70%);
-  border: 1.5px solid var(--gold-neon);
-  box-shadow: 0 0 35px rgba(245, 158, 11, 0.2), inset 0 0 30px rgba(245, 158, 11, 0.08);
+  margin-bottom: 14px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.center-hud-top {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  font-family: "Share Tech Mono", monospace;
-  font-size: 11px;
-  color: var(--gold-neon);
-  border-bottom: 1px dashed var(--gold-border);
-  padding-bottom: 6px;
-}
-
-.reactor-stage {
-  width: 100%;
-  max-width: 310px;
-  margin: 6px auto;
-  position: relative;
-}
-
-.reactor-svg {
-  width: 100%;
-  height: auto;
-  display: block;
-  filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.25));
-}
-
-/* Chuyển động bánh răng cơ khí & vòng năng lượng đồng tâm */
-.gear-outer,
-.ring-ccw,
-.ring-cw-fast,
-.ring-ccw-slow,
-.svg-spin-slow,
-.svg-spin-rev,
-.svg-spin-fast {
-  transform-origin: center;
-  transform-box: view-box;
-}
-
-.gear-outer { animation: mecha-cw 28s linear infinite; }
-.ring-ccw { animation: mecha-ccw 18s linear infinite; }
-.ring-cw-fast { animation: mecha-cw 10s linear infinite; }
-.ring-ccw-slow { animation: mecha-ccw 24s linear infinite; }
-
-.svg-spin-slow { animation: mecha-cw 20s linear infinite; }
-.svg-spin-rev { animation: mecha-ccw 12s linear infinite; }
-.svg-spin-fast { animation: mecha-cw 8s linear infinite; }
-
-/* Khi Relay BẬT (ON): Tăng tốc độ tua-bin cơ khí và bùng sáng hào quang Vàng/Trắng */
-.panel-center.reactor-active .ring-cw-fast {
-  animation-duration: 3.2s;
-}
-.panel-center.reactor-active .ring-ccw {
-  animation-duration: 6s;
-}
-.panel-center.reactor-active .reactor-svg {
-  filter: drop-shadow(0 0 26px rgba(251, 191, 36, 0.65));
-}
-
-.core-top-tag {
-  font-family: "Share Tech Mono", monospace;
-  font-size: 10px;
-  fill: #ffffff;
-  letter-spacing: 2.5px;
-}
-
-.core-huy-emblem {
+.fui-btn-engage {
+  background: var(--gold-bright);
+  color: #000;
+  border: 1px solid var(--white);
   font-family: "Orbitron", sans-serif;
-  font-size: 40px;
-  font-weight: 900;
-  letter-spacing: 5px;
-}
-
-.core-bottom-tag {
-  font-family: "Share Tech Mono", monospace;
   font-size: 12px;
-  font-weight: 700;
-  fill: var(--gold-neon);
-  letter-spacing: 2px;
-}
-
-.svg-huy-logo {
-  font-family: "Orbitron", sans-serif;
-  font-size: 28px;
   font-weight: 900;
-  fill: var(--gold-neon);
-  letter-spacing: 3px;
+  padding: 9px 18px;
+  cursor: pointer;
+  letter-spacing: 0.8px;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
 }
 
-.svg-huy-sub {
-  font-family: "Share Tech Mono", monospace;
-  font-size: 10px;
-  fill: #ffffff;
-  letter-spacing: 2px;
+.fui-btn-engage:hover:not(:disabled) {
+  background: var(--white);
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.65);
 }
 
-/* 3 Đồng hồ Telemetry dưới Lõi HUY */
-.telemetry-gauges {
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.gauge-card {
-  background: #05070b;
-  border: 1px solid var(--gold-border);
-  border-top: 2px solid var(--gold-neon);
-  padding: 8px 6px;
-  text-align: center;
-}
-
-.gauge-label {
-  display: block;
-  font-family: "Share Tech Mono", monospace;
-  font-size: 9.5px;
-  color: var(--metal-gray);
-}
-
-.gauge-val {
-  display: block;
-  font-family: "Share Tech Mono", Consolas, monospace;
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--white-pure);
-  margin-top: 2px;
-}
-
-.state-on {
-  color: var(--gold-neon) !important;
-  text-shadow: 0 0 12px var(--gold-neon);
-}
-
-.state-off {
-  color: var(--metal-gray) !important;
-}
-
-/* BẢNG SỐ LIỆU & TERMINAL CÁNH PHẢI */
-.header-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.mecha-table {
+.fui-table {
   width: 100%;
   border-collapse: collapse;
-  font-family: "Share Tech Mono", Consolas, monospace;
-  font-size: 12.5px;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 13px;
 }
 
-.mecha-table th,
-.mecha-table td {
+.fui-table th,
+.fui-table td {
   border: 1px solid rgba(251, 191, 36, 0.28);
-  padding: 6px 8px;
+  padding: 7px 10px;
   text-align: center;
 }
 
-.mecha-table th {
-  background: rgba(245, 158, 11, 0.18);
-  color: var(--gold-neon);
+.fui-table th {
+  background: rgba(245, 158, 11, 0.16);
+  color: var(--gold-bright);
   font-family: "Orbitron", sans-serif;
   font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
 }
 
-.mecha-table tbody tr:nth-child(even) {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.mecha-table tbody tr:hover {
-  background: rgba(251, 191, 36, 0.1);
-}
-
-.compact-matrix th,
-.compact-matrix td {
+.compact-table th,
+.compact-table td {
   padding: 4px 6px;
   font-size: 12px;
 }
 
-.terminal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 12px 0 6px;
+.matrix-scroll {
+  max-height: 58vh;
+  overflow-y: auto;
+}
+
+/* Nội dung Module 04: Cấu hình Uplink & Terminal */
+.uplink-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.fui-field label {
+  display: block;
   font-family: "Share Tech Mono", monospace;
   font-size: 11.5px;
-  color: var(--gold-neon);
+  color: var(--gold-bright);
+  margin-bottom: 5px;
 }
 
-.live-dot {
-  background: var(--gold-neon);
-  color: #000000;
-  font-weight: 900;
-  font-size: 10px;
-  padding: 1px 7px;
+.fui-row {
+  display: flex;
+  gap: 8px;
 }
 
-.mecha-terminal {
-  background: #030508;
-  color: var(--gold-neon);
-  border: 1px solid var(--gold-border);
-  font-family: "Share Tech Mono", Consolas, monospace;
+.fui-field input,
+.fui-field select {
+  width: 100%;
+  background: #04060a;
+  color: var(--white);
+  border: 1px solid var(--gold-dim);
+  padding: 7px 10px;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 12.5px;
+}
+
+.fui-sim-strip {
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid var(--gold-dim);
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+
+.fui-check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.bus-log-head {
+  display: flex;
+  justify-content: space-between;
+  font-family: "Share Tech Mono", monospace;
   font-size: 11.5px;
-  height: 155px;
+  color: var(--gold-bright);
+  margin-bottom: 5px;
+}
+
+.live-tag {
+  background: var(--gold-bright);
+  color: #000;
+  padding: 0 6px;
+  font-weight: 700;
+}
+
+.fui-log-terminal {
+  background: #030407;
+  color: var(--gold-bright);
+  border: 1px solid var(--gold-dim);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 11.5px;
+  height: 175px;
   overflow-y: auto;
   padding: 8px 10px;
-  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.9);
 }
 
-/* MÀN HÌNH ĐĂNG NHẬP CƠ KHÍ */
+/* ========================================================================= */
+/* LỚP 0: MÀN HÌNH ĐĂNG NHẬP BẢO MẬT                                         */
+/* ========================================================================= */
 .login-overlay {
   position: fixed;
   inset: 0;
-  background: radial-gradient(circle at center, rgba(16, 22, 34, 0.94) 0%, rgba(3, 5, 8, 0.98) 100%);
+  z-index: 9999;
+  background: radial-gradient(circle at center, rgba(12, 16, 24, 0.96) 0%, rgba(2, 3, 5, 0.99) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
   padding: 16px;
+  transition: opacity 0.45s var(--ease-out-expo);
 }
 
 .login-overlay[hidden] {
   display: none !important;
 }
 
-.login-mecha-box {
+.login-fui-frame {
   position: relative;
-  background: linear-gradient(180deg, #0d121c 0%, #06090e 100%);
-  border: 2px solid var(--gold-neon);
   width: 100%;
-  max-width: 440px;
-  padding: 24px 26px;
-  box-shadow: 0 0 50px rgba(245, 158, 11, 0.28);
+  max-width: 410px;
+  background: rgba(7, 10, 16, 0.96);
+  border: 1.5px solid var(--gold-bright);
+  padding: 26px 24px;
+  text-align: center;
+  box-shadow: 0 0 50px rgba(245, 158, 11, 0.25);
 }
 
-.hazard-bar-top {
-  height: 8px;
-  margin-bottom: 14px;
-  border: 1px solid var(--gold-neon);
-}
-
-.mecha-bolt {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: var(--gold-neon);
-  border: 1px solid #000;
-}
-.mecha-bolt.tl { top: 6px; left: 6px; }
-.mecha-bolt.tr { top: 6px; right: 6px; }
-.mecha-bolt.bl { bottom: 6px; left: 6px; }
-.mecha-bolt.br { bottom: 6px; right: 6px; }
-
-.login-core-container {
-  width: 165px;
-  height: 165px;
+.login-turbine-wrap {
+  width: 155px;
+  height: 155px;
   margin: 0 auto 10px;
 }
 
-.mecha-svg-login {
+.login-svg {
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.4));
 }
 
-.login-title-block {
-  text-align: center;
-  margin-bottom: 14px;
-}
-
-.mecha-badge {
-  font-family: "Share Tech Mono", monospace;
-  font-size: 11px;
-  color: var(--gold-neon);
-  letter-spacing: 1.5px;
-}
-
-.login-title-block h2 {
+.login-huy-text {
   font-family: "Orbitron", sans-serif;
-  font-size: 18px;
-  color: var(--white-pure);
-  margin: 4px 0;
+  font-size: 24px;
+  font-weight: 900;
+  fill: var(--gold-bright);
+  letter-spacing: 3px;
 }
 
-.login-title-block p {
+.login-sub-text {
   font-family: "Share Tech Mono", monospace;
-  font-size: 12px;
-  color: var(--metal-gray);
+  font-size: 9px;
+  fill: var(--white);
+  letter-spacing: 2px;
 }
 
-.login-title-block strong {
-  color: var(--gold-neon);
+.fui-micro-tag {
+  font-family: "Share Tech Mono", monospace;
+  font-size: 10.5px;
+  color: var(--gold-bright);
+  letter-spacing: 2px;
+}
+
+.login-head h2 {
+  font-family: "Orbitron", sans-serif;
+  font-size: 15.5px;
+  color: var(--white);
+  margin: 4px 0 16px;
 }
 
 .login-form {
@@ -804,67 +1074,83 @@ code {
   gap: 10px;
 }
 
-.login-form label {
-  font-family: "Share Tech Mono", monospace;
-  font-size: 12px;
-  color: var(--gold-neon);
+.fui-input-box {
+  display: flex;
+  align-items: center;
+  background: #030508;
+  border: 1px solid var(--gold-bright);
+  padding: 0 10px;
 }
 
-.login-form input {
+.input-prefix {
+  font-family: "Share Tech Mono", monospace;
+  font-size: 12px;
+  color: var(--gold-bright);
+  margin-right: 8px;
+}
+
+.fui-input-box input {
   width: 100%;
-  background: #04060a;
-  color: var(--white-pure);
-  border: 1px solid var(--gold-neon);
-  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  color: var(--white);
   font-family: "Share Tech Mono", monospace;
   font-size: 14px;
+  padding: 10px 0;
   outline: none;
 }
 
 .login-error {
-  background: rgba(239, 68, 68, 0.2);
-  border: 1px solid var(--red-danger);
-  color: #fecaca;
-  padding: 7px 10px;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.16);
+  border: 1px solid var(--danger);
   font-family: "Share Tech Mono", monospace;
-  font-size: 12px;
+  font-size: 11.5px;
+  padding: 6px;
 }
 
-.login-footer-hud {
+.login-meta {
   margin-top: 14px;
   padding-top: 10px;
-  border-top: 1px dashed var(--gold-border);
+  border-top: 1px dashed var(--gold-dim);
   display: flex;
   justify-content: space-between;
   font-family: "Share Tech Mono", monospace;
   font-size: 11px;
-  color: var(--metal-gray);
+  color: var(--muted);
+}
+.login-meta b {
+  color: var(--gold-bright);
 }
 
-.login-footer-hud strong {
-  color: var(--gold-neon);
-}
-
-@keyframes mecha-cw {
+@keyframes spin-cw {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-@keyframes mecha-ccw {
+@keyframes spin-ccw {
   from { transform: rotate(360deg); }
   to { transform: rotate(0deg); }
 }
 
-@media (max-width: 1150px) {
-  .cockpit-grid {
-    grid-template-columns: 1fr;
+@keyframes pulse-border {
+  0%, 100% { opacity: 0.78; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.03); }
+}
+
+@media (max-width: 960px) {
+  .core-assembly {
+    width: 100%;
+    height: 100%;
   }
-  .hud-header {
-    grid-template-columns: 1fr;
-    text-align: center;
+  .orbital-connectors, .fui-ruler-left {
+    display: none;
   }
-  .header-left, .header-center-crest, .header-right {
-    justify-content: center;
-    flex-wrap: wrap;
-  }
+  .wing-tl { top: 64px; left: 12px; }
+  .wing-tr { top: 64px; right: 74px; }
+  .wing-bl { bottom: 30px; left: 12px; }
+  .wing-br { bottom: 30px; right: 74px; }
+  .orbital-wing { width: 175px; padding: 8px 10px; }
+  .fui-modal { inset: 50px 70px 16px 12px; }
+  .uplink-grid, .fui-Readout-grid { grid-template-columns: 1fr; }
 }

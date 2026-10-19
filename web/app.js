@@ -1,9 +1,9 @@
 /**
- * Đề tài ĐT42: Logic xử lý giao diện Web Dashboard (MQTT.js qua WebSocket)
- * - Bảo vệ truy cập bằng mật khẩu đăng nhập
- * - Hoạt động độc lập 24/7 trên Đám mây (Cloud EMQX Broker wss://broker.emqx.io:8084/mqtt)
- *   hoặc kết nối Local Broker / Wi-Fi ESP32
- * - Chỉ cập nhật trạng thái hiển thị khi nhận bản tin từ dt42/state
+ * Đề tài ĐT42: Hệ thống FUI Đa Lớp (Multi-Layer Interactive HUD)
+ * - Lớp 0: Màn hình khóa bảo mật Neural Handshake
+ * - Lớp 1: Tâm Lõi Bát Giác & Tua-bin Cơ Khí HUY (Core Standby)
+ * - Lớp 2: Nhấn vào Lõi HUY -> Bung 4 Cánh Vệ Tinh & Mạch Dẫn (Orbital Sectors)
+ * - Lớp 3: Mở từng Khoang Hologram Chức Năng (Relay / Đo RTT / Ma trận 30 mẫu / Uplink)
  */
 
 (function () {
@@ -12,6 +12,20 @@
   const loginPass      = document.getElementById('login-pass');
   const loginError     = document.getElementById('login-error');
   const btnLogout      = document.getElementById('btn-logout');
+
+  const fuiStage       = document.getElementById('fui-stage');
+  const coreAssembly   = document.getElementById('core-assembly');
+  const coreTrigger    = document.getElementById('central-core-trigger');
+  const corePromptPill = document.getElementById('core-prompt-pill');
+  const layerIndicator = document.getElementById('hud-layer-indicator');
+  const svgCoreState   = document.getElementById('svg-core-state');
+
+  // Mini readouts trên Lõi & Vệ tinh
+  const hudMiniRtt     = document.getElementById('hud-mini-rtt');
+  const hudMiniSeq     = document.getElementById('hud-mini-seq');
+  const wingRelayVal   = document.getElementById('wing-relay-val');
+  const wingRttVal     = document.getElementById('wing-rtt-val');
+  const wingSeqVal     = document.getElementById('wing-seq-val');
 
   const brokerInput    = document.getElementById('broker-url');
   const btnReconnect   = document.getElementById('btn-reconnect');
@@ -32,15 +46,20 @@
   const logBox         = document.getElementById('packet-log');
 
   const VALID_PASSWORDS = ['dt42', '123456', 'admin'];
+  const MODALS = ['mod-control', 'mod-benchmark', 'mod-matrix', 'mod-uplink'];
 
-  // Nếu chạy trên máy local (cổng 3000), dùng Local Broker; nếu mở trên Cloud (github.io...), dùng Cloud EMQX
-  const isLocalServer = (window.location.port === '3000' || window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168.'));
+  const isLocalServer = (
+    window.location.port === '3000' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname === 'localhost' ||
+    window.location.hostname.startsWith('192.168.')
+  );
   if (isLocalServer && window.location.protocol === 'http:') {
     brokerInput.value = `ws://${window.location.host}/mqtt`;
-    cloudSimToggle.checked = false; // Local server đã có simulator Node.js chạy sẵn
+    cloudSimToggle.checked = false;
   } else {
     brokerInput.value = 'wss://broker.emqx.io:8084/mqtt';
-    cloudSimToggle.checked = true;  // Trên Cloud tự động bật ESP32 ảo kết nối qua EMQX Cloud
+    cloudSimToggle.checked = true;
   }
 
   let client = null;
@@ -56,6 +75,113 @@
     2: { sent: 0, rtts: [] }
   };
 
+  // =========================================================================
+  // ĐIỀU HƯỚNG ĐA LỚP (LAYER 1 <-> LAYER 2 <-> LAYER 3)
+  // =========================================================================
+  function setDockActive(targetId) {
+    document.querySelectorAll('.dock-orb').forEach((btn) => {
+      btn.classList.toggle('active', btn.getAttribute('data-target') === targetId);
+    });
+  }
+
+  function closeAllModals() {
+    MODALS.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.hidden = true;
+    });
+    fuiStage.classList.remove('modal-open');
+    const isExpanded = coreAssembly.classList.contains('expanded');
+    layerIndicator.textContent = isExpanded
+      ? 'LAYER 02 // ORBITAL SECTORS DEPLOYED'
+      : 'LAYER 01 // CORE STANDBY';
+    setDockActive('core');
+  }
+
+  function openModal(modId) {
+    MODALS.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.hidden = (id !== modId);
+    });
+    fuiStage.classList.add('modal-open');
+    const titles = {
+      'mod-control':   'LAYER 03 // SECTOR 01: ACTUATOR CONTROL',
+      'mod-benchmark': 'LAYER 03 // SECTOR 02: QoS RTT ANALYZER',
+      'mod-matrix':    'LAYER 03 // SECTOR 03: TELEMETRY MATRIX',
+      'mod-uplink':    'LAYER 03 // SECTOR 04: UPLINK & BUS'
+    };
+    layerIndicator.textContent = titles[modId] || 'LAYER 03 // MODULE ACTIVE';
+    setDockActive(modId);
+  }
+
+  // Nhấn vào Tâm Lõi HUY -> Bung / Thu 4 cánh vệ tinh (Lớp 1 <-> Lớp 2)
+  coreTrigger.addEventListener('click', () => {
+    const nowExpanded = coreAssembly.classList.toggle('expanded');
+    if (nowExpanded) {
+      corePromptPill.innerHTML = '<span>[ CHỌN 1 TRONG 4 KHOANG VỆ TINH HOẶC NHẤN LÕI ĐỂ THU GỌN ]</span>';
+      layerIndicator.textContent = 'LAYER 02 // ORBITAL SECTORS DEPLOYED';
+    } else {
+      corePromptPill.innerHTML = '<span>[ NHẤN VÀO LÕI HUY ĐỂ BUNG CÁC KHOANG ĐIỀU KHIỂN ]</span>';
+      layerIndicator.textContent = 'LAYER 01 // CORE STANDBY';
+    }
+  });
+
+  // Nhấn vào 1 trong 4 Cánh Vệ Tinh -> Mở Cửa sổ Hologram (Lớp 3)
+  document.querySelectorAll('[data-open-mod]').forEach((wing) => {
+    wing.addEventListener('click', () => {
+      const targetMod = wing.getAttribute('data-open-mod');
+      openModal(targetMod);
+    });
+  });
+
+  // Chuyển nhanh giữa các Module (ví dụ từ Bảng tổng hợp sang Ma trận 30 mẫu)
+  document.querySelectorAll('[data-switch-mod]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      openModal(btn.getAttribute('data-switch-mod'));
+    });
+  });
+
+  // Nút đóng cửa sổ Module
+  document.querySelectorAll('[data-close-mod]').forEach((btn) => {
+    btn.addEventListener('click', closeAllModals);
+  });
+
+  // Nhấn phím ESC để đóng lớp 3 về lớp 2, hoặc từ lớp 2 thu về lớp 1
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (fuiStage.classList.contains('modal-open')) {
+        closeAllModals();
+      } else if (coreAssembly.classList.contains('expanded')) {
+        coreAssembly.classList.remove('expanded');
+        corePromptPill.innerHTML = '<span>[ NHẤN VÀO LÕI HUY ĐỂ BUNG CÁC KHOANG ĐIỀU KHIỂN ]</span>';
+        layerIndicator.textContent = 'LAYER 01 // CORE STANDBY';
+      }
+    }
+  });
+
+  // Cột Dock 5 nút tròn bên phải (Giống Hình 1)
+  document.querySelectorAll('.dock-orb').forEach((orb) => {
+    orb.addEventListener('click', () => {
+      const target = orb.getAttribute('data-target');
+      if (target === 'core') {
+        closeAllModals();
+        coreAssembly.classList.toggle('expanded');
+        const isExp = coreAssembly.classList.contains('expanded');
+        corePromptPill.innerHTML = isExp
+          ? '<span>[ CHỌN 1 TRONG 4 KHOANG VỆ TINH HOẶC NHẤN LÕI ĐỂ THU GỌN ]</span>'
+          : '<span>[ NHẤN VÀO LÕI HUY ĐỂ BUNG CÁC KHOANG ĐIỀU KHIỂN ]</span>';
+        layerIndicator.textContent = isExp
+          ? 'LAYER 02 // ORBITAL SECTORS DEPLOYED'
+          : 'LAYER 01 // CORE STANDBY';
+      } else {
+        coreAssembly.classList.add('expanded');
+        openModal(target);
+      }
+    });
+  });
+
+  // =========================================================================
+  // XỬ LÝ MQTT, VÒNG KÍN TRẠNG THÁI & ĐO ĐỘ TRỄ RTT
+  // =========================================================================
   function appendLog(line) {
     const ts = new Date().toISOString().slice(11, 23);
     logBox.textContent += `[${ts}] ${line}\n`;
@@ -82,10 +208,12 @@
   }
 
   function updateSummaryTable() {
+    let totalSamples = 0;
     [0, 1, 2].forEach((q) => {
       const row = summaryTbody.querySelector(`tr[data-qos="${q}"]`);
       const s = stats[q];
       const count = s.rtts.length;
+      totalSamples += count;
       const rate = s.sent > 0 ? ((count / s.sent) * 100).toFixed(0) : '—';
       let minStr = '—', maxStr = '—', meanStr = '—';
 
@@ -112,6 +240,8 @@
         if (cell) cell.textContent = val.toFixed(2);
       });
     });
+
+    if (wingSeqVal) wingSeqVal.textContent = `${totalSamples} / 90`;
   }
 
   function setControlsEnabled(enabled) {
@@ -121,7 +251,6 @@
     btnBenchmark.disabled = !enabled;
   }
 
-  // Khởi tạo ESP32 ảo kết nối trực tiếp lên Cloud EMQX Broker để hệ thống chạy 24/7 không cần bật PC
   function startCloudEsp32Sim(brokerUrl) {
     stopCloudEsp32Sim();
     if (!cloudSimToggle.checked) return;
@@ -143,7 +272,7 @@
       simClient.subscribe('dt42/sim_button', { qos: 1 });
       simClient.publish('dt42/status', JSON.stringify({ online: true }), { qos: 1, retain: true });
       simClient.publish('dt42/state', JSON.stringify({ state: simRelayState, t_send: 0 }), { qos: 1, retain: true });
-      appendLog('[ESP32-Cloud] Đã kết nối Broker và phát bản tin online=true');
+      appendLog('[ESP32-Cloud] Online & Ready');
     });
 
     simClient.on('message', (topic, message, packet) => {
@@ -169,9 +298,7 @@
             t_send: 0
           }), { qos: 1, retain: true });
         }
-      } catch (err) {
-        // ignore invalid json
-      }
+      } catch (err) {}
     });
   }
 
@@ -194,10 +321,10 @@
     const tSend = Number((performance.now() + performance.timeOrigin).toFixed(2));
     stats[qos].sent += 1;
     lastCmdIdEl.textContent = String(cmdCounter);
+    if (hudMiniSeq) hudMiniSeq.textContent = String(cmdCounter);
     updateSummaryTable();
 
-    const payloadObj = { action, t_send: tSend };
-    const payload = JSON.stringify(payloadObj);
+    const payload = JSON.stringify({ action, t_send: tSend });
 
     return new Promise((resolve) => {
       const timer = setTimeout(() => {
@@ -214,48 +341,34 @@
     });
   }
 
-  const reactorPanel   = document.getElementById('reactor-panel');
-  const reactorStage   = document.getElementById('reactor-stage');
-  const svgCoreState   = document.getElementById('svg-core-state');
-  const coreModeLabel  = document.getElementById('core-mode-label');
-
-  if (reactorStage) {
-    reactorStage.style.cursor = 'pointer';
-    reactorStage.title = 'Nhấn vào Lõi Năng Lượng HUY để Đóng/Ngắt Relay';
-    reactorStage.addEventListener('click', () => {
-      const nextAct = relayEl.textContent.trim() === 'ON' ? 'OFF' : 'ON';
-      sendCommand(nextAct);
-    });
-  }
-
   function connectBroker() {
     if (client) {
       try { client.end(true); } catch (e) {}
       client = null;
     }
     const url = brokerInput.value.trim();
-    brokerBadge.textContent = 'UPLINK: CONNECTING...';
-    brokerBadge.className = 'hud-pill pill-offline';
+    brokerBadge.textContent = 'UPLINK: CONNECTING';
+    brokerBadge.className = 'fui-badge badge-off';
 
     startCloudEsp32Sim(url);
 
     client = mqtt.connect(url, {
-      clientId: 'web_dashboard_dt42_' + Math.random().toString(16).slice(2, 7),
+      clientId: 'web_fui_dt42_' + Math.random().toString(16).slice(2, 7),
       clean: true,
       protocolVersion: 4
     });
 
     client.on('connect', () => {
       brokerBadge.textContent = 'UPLINK: ONLINE';
-      brokerBadge.className = 'hud-pill pill-online';
+      brokerBadge.className = 'fui-badge badge-on';
       client.subscribe('dt42/state', { qos: 2 });
       client.subscribe('dt42/status', { qos: 1 });
-      appendLog(`Đã kết nối Broker (${url}); Đăng ký dt42/state, dt42/status`);
+      appendLog(`Connected to ${url}; Subscribed dt42/state, dt42/status`);
     });
 
     client.on('error', () => {
       brokerBadge.textContent = 'UPLINK: ERROR';
-      brokerBadge.className = 'hud-pill pill-offline';
+      brokerBadge.className = 'fui-badge badge-off';
     });
 
     client.on('message', (topic, message, packet) => {
@@ -264,8 +377,8 @@
         const data = JSON.parse(raw);
         if (topic === 'dt42/status') {
           esp32Online = Boolean(data.online);
-          esp32Badge.textContent = esp32Online ? 'ESP32 UNIT: ONLINE' : 'ESP32 UNIT: OFFLINE';
-          esp32Badge.className = esp32Online ? 'hud-pill pill-online' : 'hud-pill pill-offline';
+          esp32Badge.textContent = esp32Online ? 'ESP32: ONLINE' : 'ESP32: OFFLINE';
+          esp32Badge.className = esp32Online ? 'fui-badge badge-on' : 'fui-badge badge-off';
           setControlsEnabled(esp32Online);
           appendLog(`RECV dt42/status [Retain=${packet.retain}] ${raw}`);
           return;
@@ -273,23 +386,31 @@
 
         if (topic === 'dt42/state') {
           const stateStr = data.state === 'ON' ? 'ON' : 'OFF';
+          const isOn = stateStr === 'ON';
+
           relayEl.textContent = stateStr;
-          relayEl.className = 'gauge-val ' + (stateStr === 'ON' ? 'state-on' : 'state-off');
+          relayEl.className = 'ro-value ' + (isOn ? 'state-on' : 'state-off');
           if (svgCoreState) svgCoreState.textContent = `RELAY: ${stateStr}`;
-          if (coreModeLabel) coreModeLabel.textContent = stateStr === 'ON' ? 'CORE STATUS: ENGAGED' : 'CORE STATUS: STANDBY';
-          if (reactorPanel) reactorPanel.classList.toggle('reactor-active', stateStr === 'ON');
+          if (wingRelayVal) {
+            wingRelayVal.textContent = stateStr;
+            wingRelayVal.className = isOn ? 'val-on' : 'val-off';
+          }
+          coreAssembly.classList.toggle('relay-on', isOn);
 
           if (pendingCmd && data.t_send > 0 && Number(data.t_send) === pendingCmd.t_send) {
             const tAck = Number((performance.now() + performance.timeOrigin).toFixed(2));
             const rtt = Math.max(0.1, tAck - Number(data.t_send));
+            const rttStr = `${rtt.toFixed(2)} ms`;
             const q = pendingCmd.qos;
             clearTimeout(pendingCmd.timer);
             const done = pendingCmd.resolve;
             pendingCmd = null;
 
             stats[q].rtts.push(rtt);
-            lastRttEl.textContent = `${rtt.toFixed(2)} ms`;
-            appendLog(`RECV dt42/state [QoS ${packet.qos}] state=${stateStr} -> RTT=${rtt.toFixed(2)} ms`);
+            lastRttEl.textContent = rttStr;
+            if (hudMiniRtt) hudMiniRtt.textContent = rttStr;
+            if (wingRttVal) wingRttVal.textContent = rttStr;
+            appendLog(`RECV dt42/state [QoS ${packet.qos}] state=${stateStr} -> RTT=${rttStr}`);
             updateSummaryTable();
             done(rtt);
           } else {
@@ -303,7 +424,6 @@
     });
   }
 
-  // Xử lý đăng nhập mật khẩu
   function checkAuth() {
     if (sessionStorage.getItem('dt42_auth') === '1') {
       loginOverlay.hidden = true;
@@ -330,6 +450,8 @@
 
   btnLogout.addEventListener('click', () => {
     sessionStorage.removeItem('dt42_auth');
+    closeAllModals();
+    coreAssembly.classList.remove('expanded');
     stopCloudEsp32Sim();
     if (client) {
       try { client.end(true); } catch (e) {}
@@ -352,7 +474,7 @@
   btnOff.addEventListener('click', () => sendCommand('OFF'));
   btnLocal.addEventListener('click', () => {
     if (client && client.connected) {
-      appendLog('Nhấn nút tại chỗ (GPIO27) -> t_send=0');
+      appendLog('Local Button Override (GPIO27) -> t_send=0');
       client.publish('dt42/sim_button', '{"press":true}', { qos: 1 });
     }
   });

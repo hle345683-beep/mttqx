@@ -5,371 +5,520 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="darkreader-lock">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <title>HUY // J.A.R.V.I.S. &amp; JAEGER MECHATRONICS COCKPIT [ĐT42]</title>
+  <title>HUY // STARK-JAEGER TACTICAL FUI OS [ĐT42]</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=huy_mecha_4">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=huy_fui_5">
 </head>
 <body>
-  <!-- Lớp nền HUD Cơ khí & Tia quét -->
-  <div class="hud-bg-grid"></div>
-  <div class="hud-vignette"></div>
-  <div class="hud-scanlines"></div>
+  <!-- LỚP NỀN BẢN VẼ KỸ THUẬT FUI (Hình 1 & Hình 3) -->
+  <div class="fui-canvas">
+    <div class="fui-grid"></div>
+    <div class="fui-crosshairs"></div>
+    <div class="fui-scanline"></div>
 
-  <!-- Khung viền HUD Buồng lái Jaeger (4 góc màn hình) -->
-  <div class="cockpit-frame-top">
-    <div class="hazard-strip"></div>
-    <div class="cockpit-hud-ruler">000 015 030 045 060 075 090 // STARK-JAEGER MECHATRONICS DIVISION // UNIT: HUY-MK42 // 105 120 135 150 165 180</div>
-    <div class="hazard-strip"></div>
+    <!-- Thước chia độ dọc bên trái (Giống Hình 1) -->
+    <div class="fui-ruler-left">
+      <span>30</span><span>28</span><span>26</span><span>24</span><span>22</span>
+      <span>20</span><span>18</span><span>16</span><span>14</span><span>12</span>
+      <span>10</span><span>08</span><span>06</span><span>04</span><span>02</span><span>00</span>
+      <div class="ruler-brand">SHOGUN BRAVO // STARK INDUSTRIES</div>
+    </div>
+
+    <!-- Chữ ký kỹ thuật chìm góc trái (Giống Hình 2) -->
+    <div class="jaeger-watermark">
+      <div class="wm-main">HUY BRAVO</div>
+      <div class="wm-sub">MECHATRONICS DIVISION // MARK XLII</div>
+    </div>
   </div>
 
-  <!-- MÀN HÌNH KHÓA BẢO MẬT NEURAL HANDSHAKE -->
+  <!-- ===================================================================== -->
+  <!-- LỚP 0: MÀN HÌNH KHÓA BẢO MẬT (CỬA SẬP CƠ KHÍ NEURAL HANDSHAKE)       -->
+  <!-- ===================================================================== -->
   <div id="login-overlay" class="login-overlay">
-    <div class="login-mecha-box">
-      <div class="mecha-bolt tl"></div>
-      <div class="mecha-bolt tr"></div>
-      <div class="mecha-bolt bl"></div>
-      <div class="mecha-bolt br"></div>
-      <div class="hazard-bar-top"></div>
+    <div class="shutter-top"></div>
+    <div class="shutter-bottom"></div>
 
-      <!-- Lõi Arc Reactor / Bánh răng Cơ khí HUY ở màn hình khóa -->
-      <div class="login-core-container">
-        <svg class="mecha-svg-login" viewBox="0 0 260 260">
-          <defs>
-            <radialGradient id="loginGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
-              <stop offset="45%" stop-color="#fbbf24" stop-opacity="0.85"/>
-              <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
-            </radialGradient>
-          </defs>
-          <!-- Vành bánh răng cơ khí ngoài -->
-          <g class="svg-spin-slow">
-            <circle cx="130" cy="130" r="118" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="14 8"/>
-            <circle cx="130" cy="130" r="108" fill="none" stroke="#fbbf24" stroke-width="6" stroke-dasharray="4 18"/>
+    <div class="login-fui-frame">
+      <div class="fui-corner tl"></div>
+      <div class="fui-corner tr"></div>
+      <div class="fui-corner bl"></div>
+      <div class="fui-corner br"></div>
+
+      <!-- Biểu tượng Tua-bin Ngực Jaeger Shogun Bravo + Lõi Bát Giác -->
+      <div class="login-turbine-wrap">
+        <svg viewBox="0 0 220 220" class="login-svg">
+          <g class="spin-cw-slow">
+            <polygon points="110,10 180,39 210,110 180,180 110,210 39,180 10,110 39,39" fill="none" stroke="rgba(251,191,36,0.45)" stroke-width="1.5"/>
+            <circle cx="110" cy="110" r="92" fill="none" stroke="#fbbf24" stroke-width="3" stroke-dasharray="18 10 4 10"/>
           </g>
-          <!-- Vòng thước ngắm Jaeger ngược chiều -->
-          <g class="svg-spin-rev">
-            <circle cx="130" cy="130" r="92" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="40 20 10 20"/>
-            <polygon points="130,28 135,40 125,40" fill="#fbbf24"/>
-            <polygon points="130,232 135,220 125,220" fill="#fbbf24"/>
-            <polygon points="28,130 40,135 40,125" fill="#fbbf24"/>
-            <polygon points="232,130 220,135 220,125" fill="#fbbf24"/>
+          <g class="spin-ccw-med">
+            <circle cx="110" cy="110" r="76" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="45 18"/>
+            <circle cx="110" cy="110" r="66" fill="none" stroke="#f59e0b" stroke-width="8" stroke-dasharray="4 8"/>
           </g>
-          <!-- Vòng lõi Arc Reactor -->
-          <g class="svg-spin-fast">
-            <circle cx="130" cy="130" r="74" fill="none" stroke="#fbbf24" stroke-width="4" stroke-dasharray="22 14"/>
-          </g>
-          <circle cx="130" cy="130" r="58" fill="url(#loginGlow)" stroke="#ffffff" stroke-width="2"/>
-          <polygon points="130,68 184,99 184,161 130,192 76,161 76,99" fill="rgba(6,8,12,0.88)" stroke="#fbbf24" stroke-width="2.5"/>
-          <text x="130" y="139" text-anchor="middle" class="svg-huy-logo">HUY</text>
-          <text x="130" y="156" text-anchor="middle" class="svg-huy-sub">MK-42</text>
+          <circle cx="110" cy="110" r="46" fill="rgba(245,158,11,0.15)" stroke="#fbbf24" stroke-width="2"/>
+          <text x="110" y="116" text-anchor="middle" class="login-huy-text">HUY</text>
+          <text x="110" y="132" text-anchor="middle" class="login-sub-text">CORE OS</text>
         </svg>
       </div>
 
-      <div class="login-title-block">
-        <span class="mecha-badge">J.A.R.V.I.S. OS // JAEGER NEURAL HANDSHAKE</span>
-        <h2>XÁC THỰC QUYỀN CHỈ HUY</h2>
-        <p>COMMANDER: <strong>HUY</strong> // SYSTEM: <strong>MQTT ACTUATOR ĐT42</strong></p>
+      <div class="login-head">
+        <div class="fui-micro-tag">SYS.AUTH // JAEGER DRIFT HANDSHAKE</div>
+        <h2>XÁC THỰC QUYỀN TRUY CẬP HỆ THỐNG</h2>
       </div>
 
       <form id="login-form" class="login-form">
-        <label for="login-pass">MÃ KHÓA CƠ ĐIỆN TỬ (ACCESS CODE):</label>
-        <div class="input-hud-wrap">
-          <input id="login-pass" type="password" placeholder="Nhập mã khóa (mặc định: dt42)" autocomplete="current-password" required>
+        <div class="fui-input-box">
+          <span class="input-prefix">KEY //</span>
+          <input id="login-pass" type="password" placeholder="Nhập mật khẩu (mặc định: dt42)" autocomplete="current-password" required>
         </div>
-        <p id="login-error" class="login-error" hidden>TRUY CẬP BỊ TỪ CHỐI: Sai mã khóa (Mặc định: dt42 hoặc 123456).</p>
-        <button type="submit" class="btn-mecha btn-gold btn-full">
-          <span>KÍCH HOẠT BUỒNG LÁI // ENGAGE LINK</span>
+        <p id="login-error" class="login-error" hidden>ACCESS DENIED // Sai mã khóa (Mặc định: dt42 hoặc 123456)</p>
+        <button type="submit" class="fui-btn-engage">
+          <span>INITIALIZE J.A.R.V.I.S. HUD // KHỞI ĐỘNG</span>
         </button>
       </form>
 
-      <div class="login-footer-hud">
-        <span>CLOUD CORE: <strong>EMQX 24/7</strong></span>
-        <span>STATUS: <strong>STANDBY</strong></span>
+      <div class="login-meta">
+        <span>CLOUD NODE: <b>EMQX.IO:8084</b></span>
+        <span>PROTOCOL: <b>MQTT v3.1.1</b></span>
       </div>
     </div>
   </div>
 
-  <!-- THANH HEADER BUỒNG LÁI -->
-  <header class="hud-header">
-    <div class="header-left">
-      <div class="armor-tag">SYS // ĐT-42</div>
-      <div>
-        <div class="header-eyebrow">J.A.R.V.I.S. TACTICAL TELEMETRY &amp; JAEGER ACTUATOR MATRIX</div>
-        <h1>HỆ THỐNG ĐIỀU KHIỂN THIẾT BỊ &amp; ĐO ĐỘ TRỄ MQTT</h1>
-      </div>
+  <!-- ===================================================================== -->
+  <!-- THANH TRẠNG THÁI MẢNH TRÊN CÙNG (TOP MICRO TELEMETRY BAR)             -->
+  <!-- ===================================================================== -->
+  <header class="fui-topbar">
+    <div class="topbar-left">
+      <span class="fui-node-dot"></span>
+      <span class="fui-sys-title">STARK-JAEGER FUI // ĐT42 MQTT TELEMETRY</span>
     </div>
 
-    <!-- Huy hiệu tên HUY chính giữa Header -->
-    <div class="header-center-crest">
-      <div class="crest-wing left"></div>
-      <div class="crest-hex">
-        <span class="crest-sub">COMMANDER</span>
-        <span class="crest-name">HUY</span>
-      </div>
-      <div class="crest-wing right"></div>
+    <div class="topbar-center">
+      <span class="breadcrumb-item" id="hud-layer-indicator">LAYER 01 // CORE STANDBY</span>
     </div>
 
-    <div class="header-right">
-      <span id="broker-badge" class="hud-pill pill-offline">UPLINK: DISCONNECTED</span>
-      <span id="esp32-badge" class="hud-pill pill-offline">ESP32 UNIT: OFFLINE</span>
-      <button id="btn-logout" class="btn-mecha btn-outline-gold btn-sm">LOCK HUD</button>
+    <div class="topbar-right">
+      <span id="broker-badge" class="fui-badge badge-off">UPLINK: OFFLINE</span>
+      <span id="esp32-badge" class="fui-badge badge-off">ESP32: OFFLINE</span>
+      <button id="btn-logout" class="fui-mini-btn" title="Khóa hệ thống">LOCK</button>
     </div>
   </header>
 
-  <!-- BỐ CỤC 3 CỘT BUỒNG LÁI CƠ KHÍ: CÁNH TRÁI - LÕI ARC REACTOR "HUY" Ở GIỮA - CÁNH PHẢI -->
-  <main class="cockpit-main">
-    <section class="cockpit-grid">
+  <!-- ===================================================================== -->
+  <!-- CỘT DOCK NÚT TRÒN BÊN PHẢI (GIỐNG HỆT HÌNH 1 - IRON MAN RIGHT DOCK)  -->
+  <!-- ===================================================================== -->
+  <nav class="fui-right-dock" aria-label="HUD Modules">
+    <button class="dock-orb active" data-target="core" title="Về Tâm Lõi Chính (Core View)">
+      <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="8 4"/><circle cx="20" cy="20" r="6" fill="currentColor"/></svg>
+      <span class="dock-tip">CORE HUY</span>
+    </button>
+    <button class="dock-orb" data-target="mod-control" title="Mở Khoang Điều Khiển Relay">
+      <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M20 10 v10 M13 15 a9 9 0 1 0 14 0" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+      <span class="dock-tip">01. RELAY</span>
+    </button>
+    <button class="dock-orb" data-target="mod-benchmark" title="Mở Khoang Đo Độ Trễ RTT">
+      <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 26 L12 18 M20 26 L20 12 M28 26 L28 20" stroke="currentColor" stroke-width="2.5"/></svg>
+      <span class="dock-tip">02. ĐO RTT</span>
+    </button>
+    <button class="dock-orb" data-target="mod-matrix" title="Mở Ma Trận 30 Lần Đo &amp; Xuất CSV">
+      <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="12" y="12" width="6" height="6" fill="currentColor"/><rect x="22" y="12" width="6" height="6" fill="currentColor"/><rect x="12" y="22" width="6" height="6" fill="currentColor"/><rect x="22" y="22" width="6" height="6" fill="currentColor"/></svg>
+      <span class="dock-tip">03. MA TRẬN</span>
+    </button>
+    <button class="dock-orb" data-target="mod-uplink" title="Mở Cấu Hình Broker &amp; Packet Bus">
+      <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="20,10 29,26 11,26" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+      <span class="dock-tip">04. UPLINK</span>
+    </button>
+  </nav>
 
-      <!-- CÁNH TRÁI: MODULE CƠ KHÍ CHẤP HÀNH & CẤU HÌNH UPLINK -->
-      <div class="mecha-panel panel-left">
-        <div class="panel-corner tl"></div>
-        <div class="panel-corner tr"></div>
-        <div class="panel-corner bl"></div>
-        <div class="panel-corner br"></div>
+  <!-- ===================================================================== -->
+  <!-- SÂN KHẤU TƯƠNG TÁC TRUNG TÂM (LỚP 1: LÕI HUY -> LỚP 2: BUNG CÁNH)     -->
+  <!-- ===================================================================== -->
+  <main class="fui-stage" id="fui-stage">
 
-        <div class="panel-header">
-          <span class="module-code">UNIT // 01</span>
-          <h2>ĐIỀU KHIỂN CHẤP HÀNH &amp; KẾT NỐI</h2>
-          <div class="panel-hazard"></div>
+    <!-- TRỤC ĐỐI XỨNG DỌC FUI (GIỐNG HỆT HÌNH 3: ĐỈNH - TÂM BÁT GIÁC - ĐÁY) -->
+    <div class="fui-vertical-spine">
+      <!-- Đỉnh trục: Vòm Cảm Biến Uplink -->
+      <div class="spine-top-dome">
+        <div class="dome-ring"></div>
+        <div class="dome-label">TELEMETRY BUS // MQTT v3.1.1</div>
+      </div>
+      <div class="spine-line top"></div>
+      <div class="spine-line bottom"></div>
+      <!-- Đáy trục: Vòm Radar Độ Trễ -->
+      <div class="spine-bottom-radar">
+        <svg viewBox="0 0 160 160" class="radar-svg">
+          <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1"/>
+          <circle cx="80" cy="80" r="48" fill="none" stroke="rgba(251,191,36,0.35)" stroke-width="1" stroke-dasharray="4 4"/>
+          <circle cx="80" cy="80" r="24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+          <line x1="10" y1="80" x2="150" y2="80" stroke="rgba(251,191,36,0.25)" stroke-width="1"/>
+          <line x1="80" y1="10" x2="80" y2="150" stroke="rgba(251,191,36,0.25)" stroke-width="1"/>
+          <line x1="80" y1="80" x2="135" y2="35" stroke="#fbbf24" stroke-width="2" class="radar-sweep"/>
+        </svg>
+        <div class="radar-readout">
+          <span>RTT: <b id="hud-mini-rtt">— ms</b></span>
+          <span>SEQ: <b id="hud-mini-seq">0</b></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- TỔ HỢP LÕI TRUNG TÂM "HUY" & CÁC CÁNH QUẠT HOLOGRAM BUNG RA         -->
+    <!-- =================================================================== -->
+    <div class="core-assembly" id="core-assembly">
+
+      <!-- 4 ĐƯỜNG DẪN MẠCH KỸ THUẬT NỐI TỪ TÂM RA 4 VỆ TINH (Chỉ hiện khi bung Lớp 2) -->
+      <svg class="orbital-connectors" viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid meet">
+        <!-- Nhánh 1: Trên-Trái -->
+        <polyline points="500,350 340,210 210,210" fill="none" stroke="#fbbf24" stroke-width="1.5" class="conn-line"/>
+        <circle cx="340" cy="210" r="4" fill="#ffffff" class="conn-dot"/>
+        <!-- Nhánh 2: Trên-Phải -->
+        <polyline points="500,350 660,210 790,210" fill="none" stroke="#fbbf24" stroke-width="1.5" class="conn-line"/>
+        <circle cx="660" cy="210" r="4" fill="#ffffff" class="conn-dot"/>
+        <!-- Nhánh 3: Dưới-Trái -->
+        <polyline points="500,350 340,490 210,490" fill="none" stroke="#fbbf24" stroke-width="1.5" class="conn-line"/>
+        <circle cx="340" cy="490" r="4" fill="#ffffff" class="conn-dot"/>
+        <!-- Nhánh 4: Dưới-Phải -->
+        <polyline points="500,350 660,490 790,490" fill="none" stroke="#fbbf24" stroke-width="1.5" class="conn-line"/>
+        <circle cx="660" cy="490" r="4" fill="#ffffff" class="conn-dot"/>
+      </svg>
+
+      <!-- 4 CÁNH QUẠT / VỆ TINH BUNG RA KHI NHẤN VÀO LÕI HUY (LỚP 2) -->
+      <!-- Vệ tinh 01: Điều khiển Relay -->
+      <div class="orbital-wing wing-tl" data-open-mod="mod-control">
+        <div class="wing-header">
+          <span class="wing-idx">SECTOR 01</span>
+          <span class="wing-dot"></span>
+        </div>
+        <h3>ACTUATOR CONTROL</h3>
+        <p>Điều khiển Đóng/Ngắt Relay &amp; Nút nhấn GPIO27</p>
+        <div class="wing-metric">
+          <span>STATE:</span>
+          <strong id="wing-relay-val" class="val-off">OFF</strong>
+        </div>
+        <span class="wing-action">MỞ GIAO DIỆN ▸</span>
+      </div>
+
+      <!-- Vệ tinh 02: Phân tích độ trễ RTT -->
+      <div class="orbital-wing wing-tr" data-open-mod="mod-benchmark">
+        <div class="wing-header">
+          <span class="wing-idx">SECTOR 02</span>
+          <span class="wing-dot"></span>
+        </div>
+        <h3>QoS RTT ANALYZER</h3>
+        <p>Đo tự động 30 lệnh × 3 mức QoS (0, 1, 2)</p>
+        <div class="wing-metric">
+          <span>LAST RTT:</span>
+          <strong id="wing-rtt-val">— ms</strong>
+        </div>
+        <span class="wing-action">MỞ GIAO DIỆN ▸</span>
+      </div>
+
+      <!-- Vệ tinh 03: Ma trận 30 mẫu đo -->
+      <div class="orbital-wing wing-bl" data-open-mod="mod-matrix">
+        <div class="wing-header">
+          <span class="wing-idx">SECTOR 03</span>
+          <span class="wing-dot"></span>
+        </div>
+        <h3>TELEMETRY MATRIX</h3>
+        <p>Bảng 30 mẫu đo chi tiết từng lệnh &amp; Xuất CSV</p>
+        <div class="wing-metric">
+          <span>SAMPLES:</span>
+          <strong id="wing-seq-val">0 / 90</strong>
+        </div>
+        <span class="wing-action">MỞ GIAO DIỆN ▸</span>
+      </div>
+
+      <!-- Vệ tinh 04: Cấu hình Uplink & Nhật ký gói tin -->
+      <div class="orbital-wing wing-br" data-open-mod="mod-uplink">
+        <div class="wing-header">
+          <span class="wing-idx">SECTOR 04</span>
+          <span class="wing-dot"></span>
+        </div>
+        <h3>UPLINK &amp; BUS LOG</h3>
+        <p>Cấu hình Broker EMQX, QoS &amp; Dòng gói tin MQTT</p>
+        <div class="wing-metric">
+          <span>BROKER:</span>
+          <strong id="wing-broker-val">EMQX CLOUD</strong>
+        </div>
+        <span class="wing-action">MỞ GIAO DIỆN ▸</span>
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- TÂM LÕI BÁT GIÁC CƠ KHÍ & TUA-BIN JAEGER "HUY" (CLICK ĐỂ BUNG RA) -->
+      <!-- ================================================================= -->
+      <div class="central-core-trigger" id="central-core-trigger" role="button" tabindex="0" title="Nhấn vào Lõi HUY để bung/đóng các phân hệ điều khiển">
+        <svg class="master-fui-svg" viewBox="0 0 520 520" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="shogunCore" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+              <stop offset="30%" stop-color="#fbbf24" stop-opacity="0.85"/>
+              <stop offset="65%" stop-color="#d97706" stop-opacity="0.28"/>
+              <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="goldStencils" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="40%" stop-color="#fbbf24"/>
+              <stop offset="100%" stop-color="#f59e0b"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Khung Bát Giác Cơ Khí Hạng Nặng bên ngoài (Giống Hình 3) -->
+          <g class="fui-octagon-frame">
+            <polygon points="180,26 340,26 494,180 494,340 340,494 180,494 26,340 26,180"
+                     fill="rgba(5,7,11,0.75)" stroke="#ffffff" stroke-width="2"/>
+            <polygon points="186,38 334,38 482,186 482,334 334,482 186,482 38,334 38,186"
+                     fill="none" stroke="#fbbf24" stroke-width="1.2" stroke-dasharray="28 10 6 10"/>
+            <!-- 8 Chốt khóa cơ khí ở 8 đỉnh bát giác -->
+            <rect x="174" y="20" width="12" height="12" fill="#fbbf24"/>
+            <rect x="334" y="20" width="12" height="12" fill="#fbbf24"/>
+            <rect x="488" y="174" width="12" height="12" fill="#fbbf24"/>
+            <rect x="488" y="334" width="12" height="12" fill="#fbbf24"/>
+            <rect x="334" y="488" width="12" height="12" fill="#fbbf24"/>
+            <rect x="174" y="488" width="12" height="12" fill="#fbbf24"/>
+            <rect x="20" y="334" width="12" height="12" fill="#fbbf24"/>
+            <rect x="20" y="174" width="12" height="12" fill="#fbbf24"/>
+          </g>
+
+          <!-- Vòng Cánh Quạt Đo Thông Số (Radial Fan Blades - Giống Hình 1) -->
+          <g class="spin-cw-slow">
+            <circle cx="260" cy="260" r="210" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+            <circle cx="260" cy="260" r="198" fill="none" stroke="#fbbf24" stroke-width="14" stroke-dasharray="3 9"/>
+            <circle cx="260" cy="260" r="182" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="85 45 20 45"/>
+          </g>
+
+          <!-- Vòng Tua-bin Ngực Jaeger Shogun Bravo (Xoay ngược chiều - Giống Hình 2) -->
+          <g class="spin-ccw-med">
+            <circle cx="260" cy="260" r="162" fill="none" stroke="#f59e0b" stroke-width="18" stroke-dasharray="12 10"/>
+            <circle cx="260" cy="260" r="146" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="6 12"/>
+            <!-- 4 Mũi tên định tâm cơ khí -->
+            <polygon points="260,88 268,108 252,108" fill="#ffffff"/>
+            <polygon points="260,432 268,412 252,412" fill="#ffffff"/>
+            <polygon points="88,260 108,268 108,252" fill="#ffffff"/>
+            <polygon points="432,260 412,268 412,252" fill="#ffffff"/>
+          </g>
+
+          <!-- Vòng Cuộn Từ Arc Reactor (Xoay nhanh) -->
+          <g class="spin-cw-fast">
+            <circle cx="260" cy="260" r="124" fill="none" stroke="#fbbf24" stroke-width="8" stroke-dasharray="28 16"/>
+            <circle cx="260" cy="260" r="110" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="2" stroke-dasharray="4 14"/>
+          </g>
+
+          <!-- Lõi Năng Lượng & Huy Hiệu Cách Điệu "HUY" -->
+          <circle cx="260" cy="260" r="96" fill="url(#shogunCore)"/>
+          <polygon points="260,162 345,211 345,309 260,358 175,309 175,211"
+                   fill="rgba(5,7,11,0.92)" stroke="url(#goldStencils)" stroke-width="3"/>
+
+          <!-- Chi tiết cơ khí bên trong Lục giác tâm -->
+          <line x1="195" y1="218" x2="325" y2="218" stroke="rgba(251,191,36,0.5)" stroke-width="1"/>
+          <line x1="195" y1="302" x2="325" y2="302" stroke="rgba(251,191,36,0.5)" stroke-width="1"/>
+
+          <text x="260" y="206" text-anchor="middle" class="svg-core-eyebrow">J.A.R.V.I.S. // JAEGER</text>
+          <text x="260" y="274" text-anchor="middle" fill="url(#goldStencils)" class="svg-core-huy">HUY</text>
+          <text x="260" y="324" text-anchor="middle" class="svg-core-status" id="svg-core-state">RELAY: OFF</text>
+        </svg>
+
+        <div class="core-prompt-pill" id="core-prompt-pill">
+          <span>[ NHẤN VÀO LÕI HUY ĐỂ BUNG CÁC KHOANG ĐIỀU KHIỂN ]</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- LỚP 3: CÁC CỬA SỔ HOLOGRAM MODULE (CHỈ MỞ KHI ĐƯỢC CHỌN)            -->
+    <!-- =================================================================== -->
+
+    <!-- MODULE 01: KHOANG ĐIỀU KHIỂN CHẤP HÀNH RELAY -->
+    <section class="fui-modal" id="mod-control" hidden>
+      <div class="fui-modal-card">
+        <div class="fui-corner tl"></div><div class="fui-corner tr"></div>
+        <div class="fui-corner bl"></div><div class="fui-corner br"></div>
+
+        <div class="modal-topbar">
+          <div>
+            <span class="modal-sector">SECTOR 01 // ACTUATOR DRIVE</span>
+            <h2>BẢNG ĐIỀU KHIỂN CHẤP HÀNH &amp; PHẢN HỒI VÒNG KÍN</h2>
+          </div>
+          <button class="fui-close-btn" data-close-mod>✕ ĐÓNG [ESC]</button>
         </div>
 
-        <div class="hud-form-group">
-          <div class="hud-field">
-            <label for="broker-url">MQTT WEBSOCKET NODE:</label>
-            <div class="hud-input-row">
-              <input id="broker-url" type="text" value="wss://broker.emqx.io:8084/mqtt">
-              <button id="btn-reconnect" class="btn-mecha btn-outline-gold btn-sm" type="button">RE-LINK</button>
+        <div class="modal-body">
+          <!-- 3 Đồng hồ trạng thái lớn -->
+          <div class="fui-Readout-grid">
+            <div class="fui-readout-box">
+              <span class="ro-label">TRẠNG THÁI RELAY (dt42/state)</span>
+              <strong id="relay-state" class="ro-value state-off">OFF</strong>
+            </div>
+            <div class="fui-readout-box">
+              <span class="ro-label">ĐỘ TRỄ KHỨ HỒI (RTT)</span>
+              <strong id="last-rtt" class="ro-value">— ms</strong>
+            </div>
+            <div class="fui-readout-box">
+              <span class="ro-label">CHU KỲ LỆNH (SEQ#)</span>
+              <strong id="last-cmd-id" class="ro-value">0</strong>
             </div>
           </div>
 
-          <div class="hud-field">
-            <label for="qos-select">CHẾ ĐỘ CHẤT LƯỢNG DỊCH VỤ (QoS):</label>
-            <select id="qos-select">
-              <option value="0">QoS 0 — At most once (1 gói PUBLISH)</option>
-              <option value="1" selected>QoS 1 — At least once (PUBLISH + PUBACK)</option>
-              <option value="2">QoS 2 — Exactly once (4 gói bắt tay)</option>
-            </select>
+          <!-- Cụm nút cơ khí hạng nặng -->
+          <div class="fui-action-deck">
+            <button id="btn-on" class="fui-deck-btn btn-engage" disabled>
+              <span class="deck-tag">COMMAND // ON</span>
+              <strong>KÍCH HOẠT TẢI (BẬT RELAY)</strong>
+            </button>
+            <button id="btn-off" class="fui-deck-btn btn-shutdown" disabled>
+              <span class="deck-tag">COMMAND // OFF</span>
+              <strong>NGẮT TẢI (TẮT RELAY)</strong>
+            </button>
           </div>
 
-          <div class="sim-armor-box">
-            <label class="checkbox-mecha">
+          <button id="btn-local" class="fui-wide-btn" disabled>
+            <span>TÁC ĐỘNG NÚT NHẤN CƠ KHÍ TẠI CHỖ (GPIO27 // t_send = 0)</span>
+          </button>
+
+          <div class="fui-spec-note">
+            <strong>CƠ CHẾ ĐỒNG BỘ VÒNG KÍN:</strong> Giao diện chỉ đổi trạng thái hiển thị sau khi nhận gói tin từ topic <code>dt42/state</code>. Gói tin từ nút nhấn tại chỗ (<code>t_send = 0</code>) hoặc gói Retain chỉ đồng bộ trạng thái, không tính vào RTT.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODULE 02: KHOANG PHÂN TÍCH ĐỘ TRỄ RTT THEO MỨC QoS -->
+    <section class="fui-modal" id="mod-benchmark" hidden>
+      <div class="fui-modal-card">
+        <div class="fui-corner tl"></div><div class="fui-corner tr"></div>
+        <div class="fui-corner bl"></div><div class="fui-corner br"></div>
+
+        <div class="modal-topbar">
+          <div>
+            <span class="modal-sector">SECTOR 02 // LATENCY TELEMETRY</span>
+            <h2>ĐO VÀ SO SÁNH ĐỘ TRỄ KHỨ HỒI (RTT) Ở BA MỨC QoS</h2>
+          </div>
+          <button class="fui-close-btn" data-close-mod>✕ ĐÓNG [ESC]</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="bench-toolbar">
+            <button id="btn-benchmark" class="fui-btn-engage" disabled>
+              <span>CHẠY ĐO TỰ ĐỘNG 30 LỆNH × 3 MỨC QoS</span>
+            </button>
+            <button class="fui-mini-btn" data-switch-mod="mod-matrix">XEM MA TRẬN 30 MẪU ĐO ▸</button>
+          </div>
+
+          <table class="fui-table">
+            <thead>
+              <tr>
+                <th>MỨC QoS</th>
+                <th>SỐ LỆNH PHÁT</th>
+                <th>TỶ LỆ PHẢN HỒI (%)</th>
+                <th>RTT NHỎ NHẤT (ms)</th>
+                <th>RTT LỚN NHẤT (ms)</th>
+                <th>RTT TRUNG BÌNH (ms)</th>
+              </tr>
+            </thead>
+            <tbody id="summary-tbody">
+              <tr data-qos="0"><td>QoS 0</td><td>0</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+              <tr data-qos="1"><td>QoS 1</td><td>0</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+              <tr data-qos="2"><td>QoS 2</td><td>0</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODULE 03: MA TRẬN 30 MẪU ĐO CHI TIẾT & XUẤT CSV -->
+    <section class="fui-modal" id="mod-matrix" hidden>
+      <div class="fui-modal-card modal-wide">
+        <div class="fui-corner tl"></div><div class="fui-corner tr"></div>
+        <div class="fui-corner bl"></div><div class="fui-corner br"></div>
+
+        <div class="modal-topbar">
+          <div>
+            <span class="modal-sector">SECTOR 03 // SAMPLE MATRIX</span>
+            <h2>GIÁ TRỊ RTT CỦA TỪNG LẦN ĐO (30 LẦN ĐO / MỨC QoS)</h2>
+          </div>
+          <div class="topbar-btn-group">
+            <button id="btn-export" class="fui-mini-btn gold">XUẤT FILE CSV</button>
+            <button class="fui-close-btn" data-close-mod>✕ ĐÓNG [ESC]</button>
+          </div>
+        </div>
+
+        <div class="modal-body">
+          <div class="matrix-scroll">
+            <table class="fui-table compact-table">
+              <thead>
+                <tr>
+                  <th>LẦN ĐO</th>
+                  <th>QoS 0 (ms)</th>
+                  <th>QoS 1 (ms)</th>
+                  <th>QoS 2 (ms)</th>
+                  <th>LẦN ĐO</th>
+                  <th>QoS 0 (ms)</th>
+                  <th>QoS 1 (ms)</th>
+                  <th>QoS 2 (ms)</th>
+                </tr>
+              </thead>
+              <tbody id="samples-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODULE 04: CẤU HÌNH UPLINK BROKER & NHẬT KÝ GÓI TIN MQTT -->
+    <section class="fui-modal" id="mod-uplink" hidden>
+      <div class="fui-modal-card">
+        <div class="fui-corner tl"></div><div class="fui-corner tr"></div>
+        <div class="fui-corner bl"></div><div class="fui-corner br"></div>
+
+        <div class="modal-topbar">
+          <div>
+            <span class="modal-sector">SECTOR 04 // UPLINK &amp; PACKET BUS</span>
+            <h2>CẤU HÌNH MQTT BROKER &amp; DÒNG GÓI TIN THỜI GIAN THỰC</h2>
+          </div>
+          <button class="fui-close-btn" data-close-mod>✕ ĐÓNG [ESC]</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="uplink-grid">
+            <div class="fui-field">
+              <label for="broker-url">ĐỊA CHỈ WEBSOCKET BROKER:</label>
+              <div class="fui-row">
+                <input id="broker-url" type="text" value="wss://broker.emqx.io:8084/mqtt">
+                <button id="btn-reconnect" class="fui-mini-btn gold" type="button">KẾT NỐI LẠI</button>
+              </div>
+            </div>
+
+            <div class="fui-field">
+              <label for="qos-select">MỨC CHẤT LƯỢNG DỊCH VỤ (QoS):</label>
+              <select id="qos-select">
+                <option value="0">QoS 0 — At most once (1 gói PUBLISH)</option>
+                <option value="1" selected>QoS 1 — At least once (PUBLISH + PUBACK)</option>
+                <option value="2">QoS 2 — Exactly once (4 gói bắt tay)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="fui-sim-strip">
+            <label class="fui-check-label">
               <input id="cloud-sim-toggle" type="checkbox" checked>
-              <span><strong>J.A.R.V.I.S. CLOUD ESP32 CORE:</strong> Tự động mô phỏng mạch ESP32 trên đám mây 24/7 (tắt khi dùng mạch thật)</span>
+              <span><strong>BẬT LÕI ESP32 ẢO TRÊN CLOUD:</strong> Tự động phản hồi <code>dt42/state</code> qua EMQX Cloud 24/7 khi chưa cắm mạch ESP32 thật</span>
             </label>
           </div>
-        </div>
 
-        <!-- Cụm công tắc cơ khí hạng nặng -->
-        <div class="actuator-controls">
-          <div class="actuator-label-bar">
-            <span>MANUAL ACTUATOR OVERRIDE</span>
-            <span>PIN: GPIO26 / GPIO27</span>
+          <div class="bus-log-head">
+            <span>REAL-TIME MQTT PACKET STREAM</span>
+            <span class="live-tag">ACTIVE</span>
           </div>
-          <div class="btn-mecha-group">
-            <button id="btn-on" class="btn-mecha btn-gold" disabled>
-              <span class="btn-sub">CMD: ON</span>
-              <strong>ĐÓNG RELAY (BẬT)</strong>
-            </button>
-            <button id="btn-off" class="btn-mecha btn-white" disabled>
-              <span class="btn-sub">CMD: OFF</span>
-              <strong>NGẮT RELAY (TẮT)</strong>
-            </button>
-          </div>
-          <button id="btn-local" class="btn-mecha btn-outline-gold btn-full" disabled>
-            <span>MÔ PHỎNG NÚT NHẤN CƠ KHÍ TẠI CHỖ (GPIO27 // t_send = 0)</span>
-          </button>
+          <pre id="packet-log" class="fui-log-terminal"></pre>
         </div>
-
-        <div class="hud-rule-box">
-          <div class="rule-title">NGUYÊN LÝ VÒNG KÍN (CLOSED-LOOP):</div>
-          <p>Giao diện chỉ đổi trạng thái khi nhận gói phản hồi từ <code>dt42/state</code>. Khi tác động nút cơ khí tại chỗ (<code>t_send = 0</code>) hoặc gói Retain, hệ thống đồng bộ trạng thái và không tính RTT.</p>
-        </div>
-      </div>
-
-      <!-- TRUNG TÂM BUỒNG LÁI: LÕI ARC REACTOR / JAEGER TURBINE CÁCH ĐIỆU TÊN "HUY" -->
-      <div class="mecha-panel panel-center" id="reactor-panel">
-        <div class="panel-corner tl"></div>
-        <div class="panel-corner tr"></div>
-        <div class="panel-corner bl"></div>
-        <div class="panel-corner br"></div>
-
-        <div class="center-hud-top">
-          <span class="hud-coord">SYS.CORE // ARC-JAEGER MK-42</span>
-          <span class="hud-coord" id="core-mode-label">CORE STATUS: STANDBY</span>
-        </div>
-
-        <!-- Đồ họa Vector Cơ khí Điện tử + Lõi Năng lượng HUY ở chính giữa -->
-        <div class="reactor-stage" id="reactor-stage">
-          <svg class="reactor-svg" viewBox="0 0 420 420" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <radialGradient id="corePlasma" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
-                <stop offset="35%" stop-color="#fbbf24" stop-opacity="0.9"/>
-                <stop offset="70%" stop-color="#f59e0b" stop-opacity="0.35"/>
-                <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
-              </radialGradient>
-              <linearGradient id="goldMetal" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#ffffff"/>
-                <stop offset="30%" stop-color="#fbbf24"/>
-                <stop offset="70%" stop-color="#d97706"/>
-                <stop offset="100%" stop-color="#fef08a"/>
-              </linearGradient>
-              <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="4" result="blur"/>
-                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-              </filter>
-            </defs>
-
-            <!-- Khung ngắm cơ khí cố định 4 góc -->
-            <path d="M 20 70 L 20 20 L 70 20" fill="none" stroke="#fbbf24" stroke-width="3"/>
-            <path d="M 350 20 L 400 20 L 400 70" fill="none" stroke="#fbbf24" stroke-width="3"/>
-            <path d="M 20 350 L 20 400 L 70 400" fill="none" stroke="#fbbf24" stroke-width="3"/>
-            <path d="M 350 400 L 400 400 L 400 350" fill="none" stroke="#fbbf24" stroke-width="3"/>
-
-            <!-- Vòng 1: Bánh răng cơ khí hạng nặng ngoài cùng -->
-            <g class="gear-outer">
-              <circle cx="210" cy="210" r="188" fill="none" stroke="rgba(251,191,36,0.35)" stroke-width="1.5"/>
-              <circle cx="210" cy="210" r="180" fill="none" stroke="#f59e0b" stroke-width="12" stroke-dasharray="10 14.5"/>
-              <circle cx="210" cy="210" r="168" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="4 8"/>
-            </g>
-
-            <!-- Vòng 2: Vành thước ngắm vạch chia độ Jaeger (quay ngược chiều) -->
-            <g class="ring-ccw">
-              <circle cx="210" cy="210" r="152" fill="none" stroke="#fbbf24" stroke-width="2.5" stroke-dasharray="70 25 15 25"/>
-              <circle cx="210" cy="210" r="142" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="5" stroke-dasharray="2 10"/>
-              <!-- 4 ngàm kẹp piston cơ khí -->
-              <polygon points="210,48 218,66 202,66" fill="#ffffff"/>
-              <polygon points="210,372 218,354 202,354" fill="#ffffff"/>
-              <polygon points="48,210 66,218 66,202" fill="#ffffff"/>
-              <polygon points="372,210 354,218 354,202" fill="#ffffff"/>
-            </g>
-
-            <!-- Vòng 3: Lõi cuộn từ Arc Reactor (10 cuộn đồng tâm) -->
-            <g class="ring-cw-fast">
-              <circle cx="210" cy="210" r="122" fill="none" stroke="#090c12" stroke-width="16"/>
-              <circle cx="210" cy="210" r="122" fill="none" stroke="#fbbf24" stroke-width="14" stroke-dasharray="24 14" filter="url(#neonGlow)"/>
-              <circle cx="210" cy="210" r="106" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="30 15"/>
-            </g>
-
-            <!-- Vòng 4: Khung lục giác cơ khí bảo vệ tâm -->
-            <g class="ring-ccw-slow">
-              <polygon points="210,108 298,159 298,261 210,312 122,261 122,159" fill="rgba(8,11,16,0.9)" stroke="#f59e0b" stroke-width="2.5"/>
-              <polygon points="210,118 289,164 289,256 210,302 131,256 131,164" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1" stroke-dasharray="8 6"/>
-            </g>
-
-            <!-- Hào quang Plasma trung tâm -->
-            <circle cx="210" cy="210" r="82" fill="url(#corePlasma)" class="core-plasma-circle"/>
-            <circle cx="210" cy="210" r="72" fill="rgba(7,10,15,0.92)" stroke="url(#goldMetal)" stroke-width="3.5"/>
-
-            <!-- Đường kẻ kỹ thuật bên trong tâm -->
-            <line x1="148" y1="182" x2="272" y2="182" stroke="rgba(251,191,36,0.45)" stroke-width="1"/>
-            <line x1="148" y1="238" x2="272" y2="238" stroke="rgba(251,191,36,0.45)" stroke-width="1"/>
-
-            <!-- CÁCH ĐIỆU TÊN "HUY" Ở CHÍNH GIỮA LÕI NĂNG LƯỢNG -->
-            <text x="210" y="173" text-anchor="middle" class="core-top-tag">STARK // JAEGER</text>
-            <text x="210" y="224" text-anchor="middle" fill="url(#goldMetal)" filter="url(#neonGlow)" class="core-huy-emblem">HUY</text>
-            <text x="210" y="256" text-anchor="middle" class="core-bottom-tag" id="svg-core-state">RELAY: OFF</text>
-          </svg>
-        </div>
-
-        <!-- 3 Đồng hồ Telemetry Cơ điện tử ngay dưới Lõi HUY -->
-        <div class="telemetry-gauges">
-          <div class="gauge-card">
-            <span class="gauge-label">TRẠNG THÁI RELAY (dt42/state)</span>
-            <strong id="relay-state" class="gauge-val state-off">OFF</strong>
-          </div>
-          <div class="gauge-card">
-            <span class="gauge-label">ĐỘ TRỄ KHỨ HỒI (RTT)</span>
-            <strong id="last-rtt" class="gauge-val">— ms</strong>
-          </div>
-          <div class="gauge-card">
-            <span class="gauge-label">CHU KỲ LỆNH (SEQ#)</span>
-            <strong id="last-cmd-id" class="gauge-val">0</strong>
-          </div>
-        </div>
-      </div>
-
-      <!-- CÁNH PHẢI: MODULE PHÂN TÍCH ĐỘ TRỄ RTT & NHẬT KÝ GÓI TIN J.A.R.V.I.S. -->
-      <div class="mecha-panel panel-right">
-        <div class="panel-corner tl"></div>
-        <div class="panel-corner tr"></div>
-        <div class="panel-corner bl"></div>
-        <div class="panel-corner br"></div>
-
-        <div class="panel-header-inline">
-          <div class="panel-header no-margin">
-            <span class="module-code">UNIT // 02</span>
-            <h2>ĐO ĐỘ TRỄ TRUYỀN THÔNG (RTT)</h2>
-          </div>
-          <div class="header-actions">
-            <button id="btn-benchmark" class="btn-mecha btn-gold btn-sm" disabled>CHẠY ĐO 30 LỆNH × 3 QoS</button>
-            <button id="btn-export" class="btn-mecha btn-outline-gold btn-sm">XUẤT CSV</button>
-          </div>
-        </div>
-
-        <table class="mecha-table">
-          <thead>
-            <tr>
-              <th>MỨC QoS</th>
-              <th>SỐ LỆNH</th>
-              <th>PHẢN HỒI (%)</th>
-              <th>MIN (ms)</th>
-              <th>MAX (ms)</th>
-              <th>TRUNG BÌNH (ms)</th>
-            </tr>
-          </thead>
-          <tbody id="summary-tbody">
-            <tr data-qos="0"><td>QoS 0</td><td>0</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-            <tr data-qos="1"><td>QoS 1</td><td>0</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-            <tr data-qos="2"><td>QoS 2</td><td>0</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-          </tbody>
-        </table>
-
-        <div class="terminal-header">
-          <span>J.A.R.V.I.S. PACKET STREAM // MQTT BUS MONITOR</span>
-          <span class="live-dot">LIVE</span>
-        </div>
-        <pre id="packet-log" class="mecha-terminal"></pre>
-      </div>
-
-    </section>
-
-    <!-- KHỐI DƯỚI: MA TRẬN 30 MẪU ĐO CHI TIẾT -->
-    <section class="mecha-panel panel-bottom">
-      <div class="panel-corner tl"></div>
-      <div class="panel-corner tr"></div>
-      <div class="panel-corner bl"></div>
-      <div class="panel-corner br"></div>
-
-      <div class="panel-header">
-        <span class="module-code">UNIT // 03</span>
-        <h2>MA TRẬN DỮ LIỆU ĐO RTT CHI TIẾT (30 LẦN ĐO / MỨC QoS)</h2>
-        <div class="panel-hazard"></div>
-      </div>
-
-      <div class="table-scroll">
-        <table class="mecha-table compact-matrix">
-          <thead>
-            <tr>
-              <th>LẦN ĐO</th>
-              <th>QoS 0 (ms)</th>
-              <th>QoS 1 (ms)</th>
-              <th>QoS 2 (ms)</th>
-              <th>LẦN ĐO</th>
-              <th>QoS 0 (ms)</th>
-              <th>QoS 1 (ms)</th>
-              <th>QoS 2 (ms)</th>
-            </tr>
-          </thead>
-          <tbody id="samples-tbody"></tbody>
-        </table>
       </div>
     </section>
+
   </main>
 
-  <script src="mqtt.min.js?v=huy_mecha_4"></script>
-  <script src="app.js?v=huy_mecha_4"></script>
+  <script src="mqtt.min.js?v=huy_fui_5"></script>
+  <script src="app.js?v=huy_fui_5"></script>
 </body>
 </html>
