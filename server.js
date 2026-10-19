@@ -60,14 +60,37 @@ const webServer = http.createServer((req, res) => {
   fs.createReadStream(filePath).pipe(res);
 });
 
+// Cho phép kết nối MQTT WebSocket trực tiếp trên cùng cổng Web (3000/mqtt)
+// để khi chia sẻ 1 đường link duy nhất (LAN hoặc Tunnel) không cần mở thêm cổng 8083
+const wssSamePort = new WebSocketServer({ server: webServer, path: '/mqtt' });
+wssSamePort.on('connection', (ws, req) => {
+  const stream = websocketStream(ws, { binary: true });
+  aedes.handle(stream, req);
+});
+
+function getLanIp() {
+  const os = require('os');
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const netInfo of nets[name]) {
+      if (netInfo.family === 'IPv4' && !netInfo.internal) {
+        return netInfo.address;
+      }
+    }
+  }
+  return '127.0.0.1';
+}
+
 function startServers() {
   return new Promise((resolve) => {
-    tcpServer.listen(TCP_PORT, '127.0.0.1', () => {
-      wsHttpServer.listen(WS_PORT, '127.0.0.1', () => {
-        webServer.listen(WEB_PORT, '127.0.0.1', () => {
-          console.log(`[MQTT-TCP]       mqtt://127.0.0.1:${TCP_PORT}`);
-          console.log(`[MQTT-WebSocket] ws://127.0.0.1:${WS_PORT}/mqtt`);
+    tcpServer.listen(TCP_PORT, '0.0.0.0', () => {
+      wsHttpServer.listen(WS_PORT, '0.0.0.0', () => {
+        webServer.listen(WEB_PORT, '0.0.0.0', () => {
+          const lanIp = getLanIp();
+          console.log(`[MQTT-TCP]       mqtt://${lanIp}:${TCP_PORT}`);
+          console.log(`[MQTT-WebSocket] ws://${lanIp}:${WS_PORT}/mqtt`);
           console.log(`[Web-Dashboard]  http://127.0.0.1:${WEB_PORT}`);
+          console.log(`[LAN-Link]       http://${lanIp}:${WEB_PORT}`);
           resolve({ aedes, tcpServer, wsHttpServer, webServer });
         });
       });

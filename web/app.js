@@ -132,6 +132,10 @@
   }
 
   function connectBroker() {
+    if (window.location.hostname && window.location.hostname !== '127.0.0.1' && window.location.hostname !== 'localhost') {
+      const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      brokerInput.value = `${wsProto}//${window.location.host}/mqtt`;
+    }
     const url = brokerInput.value.trim();
     client = mqtt.connect(url, {
       clientId: 'web_dashboard_dt42_' + Math.random().toString(16).slice(2, 6),
