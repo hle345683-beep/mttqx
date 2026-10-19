@@ -220,7 +220,7 @@
       client = null;
     }
     const url = brokerInput.value.trim();
-    brokerBadge.textContent = 'Broker: Đang kết nối...';
+    brokerBadge.textContent = 'UPLINK: CONNECTING...';
     brokerBadge.className = 'badge badge-offline';
 
     startCloudEsp32Sim(url);
@@ -232,7 +232,7 @@
     });
 
     client.on('connect', () => {
-      brokerBadge.textContent = 'Broker: Đã kết nối';
+      brokerBadge.textContent = 'UPLINK: ONLINE';
       brokerBadge.className = 'badge badge-online';
       client.subscribe('dt42/state', { qos: 2 });
       client.subscribe('dt42/status', { qos: 1 });
@@ -240,7 +240,7 @@
     });
 
     client.on('error', () => {
-      brokerBadge.textContent = 'Broker: Lỗi kết nối';
+      brokerBadge.textContent = 'UPLINK: ERROR';
       brokerBadge.className = 'badge badge-offline';
     });
 
@@ -250,7 +250,7 @@
         const data = JSON.parse(raw);
         if (topic === 'dt42/status') {
           esp32Online = Boolean(data.online);
-          esp32Badge.textContent = esp32Online ? 'ESP32 (LWT): Online' : 'ESP32 (LWT): Offline';
+          esp32Badge.textContent = esp32Online ? 'ESP32 UNIT: ONLINE' : 'ESP32 UNIT: OFFLINE';
           esp32Badge.className = esp32Online ? 'badge badge-online' : 'badge badge-offline';
           setControlsEnabled(esp32Online);
           appendLog(`RECV dt42/status [Retain=${packet.retain}] ${raw}`);
