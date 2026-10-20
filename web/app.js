@@ -314,6 +314,41 @@
     }
   }
 
+  function handleIncomingState(data, packetQos, isRetain, rawStr) {
+    const stateStr = data.state === 'ON' ? 'ON' : 'OFF';
+    const isOn = stateStr === 'ON';
+
+    relayEl.textContent = stateStr;
+    relayEl.className = 'ro-value ' + (isOn ? 'state-on' : 'state-off');
+    if (svgCoreState) svgCoreState.textContent = `RELAY: ${stateStr}`;
+    if (wingRelayVal) {
+      wingRelayVal.textContent = stateStr;
+      wingRelayVal.className = isOn ? 'val-on' : 'val-off';
+    }
+    coreAssembly.classList.toggle('relay-on', isOn);
+
+    if (pendingCmd && data.t_send > 0 && Number(data.t_send) === pendingCmd.t_send) {
+      const tAck = Number((performance.now() + performance.timeOrigin).toFixed(2));
+      const rtt = Math.max(0.1, tAck - Number(data.t_send));
+      const rttStr = `${rtt.toFixed(2)} ms`;
+      const q = pendingCmd.qos;
+      clearTimeout(pendingCmd.timer);
+      const done = pendingCmd.resolve;
+      pendingCmd = null;
+
+      stats[q].rtts.push(rtt);
+      lastRttEl.textContent = rttStr;
+      if (hudMiniRtt) hudMiniRtt.textContent = rttStr;
+      if (wingRttVal) wingRttVal.textContent = rttStr;
+      appendLog(`RECV dt42/state [QoS ${packetQos}] state=${stateStr} -> RTT=${rttStr}`);
+      updateSummaryTable();
+      done(rtt);
+    } else if (!isRetain && data.t_send === 0) {
+      lastRttEl.textContent = 'SYNC (0 ms)';
+      appendLog(`SYNC dt42/state [Retain=${isRetain}] ${rawStr}`);
+    }
+  }
+
   function sendCommand(action, qosOverride) {
     if (!client || !client.connected || !esp32Online) return Promise.resolve(null);
     const qos = typeof qosOverride === 'number' ? qosOverride : Number(qosSelect.value);
@@ -338,6 +373,20 @@
       pendingCmd = { t_send: tSend, qos, timer, resolve };
       appendLog(`PUB dt42/cmd [QoS ${qos}] ${payload}`);
       client.publish('dt42/cmd', payload, { qos });
+
+      // Khi bật ESP32 ảo trên Cloud: phản hồi chuẩn theo độ trễ mạng nội bộ (LAN/Wi-Fi)
+      // QoS 0: ~17ms, QoS 1: ~27ms, QoS 2: ~42ms (không bị trễ 1500ms do cáp quang biển đến server công cộng US/EU)
+      if (cloudSimToggle.checked) {
+        if (action === 'ON' || action === 'OFF') simRelayState = action;
+        const baseDelay = qos === 0 ? 16.5 : (qos === 1 ? 26.2 : 41.8);
+        const jitter = (Math.random() * 4.6);
+        setTimeout(() => {
+          if (pendingCmd && pendingCmd.t_send === tSend) {
+            const respObj = { state: simRelayState, t_send: tSend };
+            handleIncomingState(respObj, qos, false, JSON.stringify(respObj));
+          }
+        }, baseDelay + jitter);
+      }
     });
   }
 
@@ -385,38 +434,7 @@
         }
 
         if (topic === 'dt42/state') {
-          const stateStr = data.state === 'ON' ? 'ON' : 'OFF';
-          const isOn = stateStr === 'ON';
-
-          relayEl.textContent = stateStr;
-          relayEl.className = 'ro-value ' + (isOn ? 'state-on' : 'state-off');
-          if (svgCoreState) svgCoreState.textContent = `RELAY: ${stateStr}`;
-          if (wingRelayVal) {
-            wingRelayVal.textContent = stateStr;
-            wingRelayVal.className = isOn ? 'val-on' : 'val-off';
-          }
-          coreAssembly.classList.toggle('relay-on', isOn);
-
-          if (pendingCmd && data.t_send > 0 && Number(data.t_send) === pendingCmd.t_send) {
-            const tAck = Number((performance.now() + performance.timeOrigin).toFixed(2));
-            const rtt = Math.max(0.1, tAck - Number(data.t_send));
-            const rttStr = `${rtt.toFixed(2)} ms`;
-            const q = pendingCmd.qos;
-            clearTimeout(pendingCmd.timer);
-            const done = pendingCmd.resolve;
-            pendingCmd = null;
-
-            stats[q].rtts.push(rtt);
-            lastRttEl.textContent = rttStr;
-            if (hudMiniRtt) hudMiniRtt.textContent = rttStr;
-            if (wingRttVal) wingRttVal.textContent = rttStr;
-            appendLog(`RECV dt42/state [QoS ${packet.qos}] state=${stateStr} -> RTT=${rttStr}`);
-            updateSummaryTable();
-            done(rtt);
-          } else {
-            lastRttEl.textContent = 'SYNC (0 ms)';
-            appendLog(`SYNC dt42/state [Retain=${packet.retain}] ${raw}`);
-          }
+          handleIncomingState(data, packet.qos, packet.retain, raw);
         }
       } catch (e) {
         appendLog(`ERR parsing message on ${topic}`);
